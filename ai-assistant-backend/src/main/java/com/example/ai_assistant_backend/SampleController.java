@@ -11,6 +11,6 @@ public class SampleController {
 
     @GetMapping
     public String helloWorld() {
-        return "Hello from Sample API! testing";
+        return "Hello from Sample API!";
     }
 }

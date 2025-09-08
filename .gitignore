@@ -1,0 +1,47 @@
+# Node
+node_modules/
+.next/
+.env
+.env.*
+
+# Java
+*.class
+*.jar
+*.war
+*.ear
+/target/
+/.idea/
+/.classpath
+/.project
+/.settings/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Misc
+*.swp
+*.swo
+
+# VSCode
+.vscode/
+
+# Mac
+.DS_Store
+
+# npm
+package-lock.json
+yarn.lock
+
+# Build output
+/dist/
+/build/
+
+# Test output
+/coverage/
+
+# Others
+*.iml

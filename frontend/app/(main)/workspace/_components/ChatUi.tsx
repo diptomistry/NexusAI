@@ -12,6 +12,8 @@ import Markdown from "react-markdown";
 import { AuthContext } from "@/context/AuthContext";
 import { ASSISTANT } from "../../ai-assistants/page";
 import { updateUserTokens } from "@/services/database";
+import { ConversationService } from "@/services/ConversationService";
+import { Conversation, ConversationMessage } from "@/types/conversation";
 type MESSAGE = {
   role: string;
   content: string;
@@ -24,6 +26,9 @@ function ChatUi() {
   const chatRef = useRef<any>(null);
   const { user, setUser } = useContext(AuthContext);
   const inputRef = useRef<HTMLInputElement>(null);
+  const [currentConversation, setCurrentConversation] =
+    useState<Conversation | null>(null);
+
   useEffect(() => {
     if (chatRef.current) {
       chatRef.current.scrollTop = chatRef.current.scrollHeight;
@@ -32,25 +37,112 @@ function ChatUi() {
 
   useEffect(() => {
     setMessages([]);
+    setCurrentConversation(null);
+    // When assistant changes, create a new conversation or load existing ones
+    if (assistant && user) {
+      loadOrCreateConversation();
+    }
   }, [assistant?.id]);
+
+  const loadOrCreateConversation = async () => {
+    if (!assistant || !user) return;
+
+    try {
+      // Try to get existing conversations for this assistant
+      const conversations =
+        await ConversationService.getUserConversationsByAssistant(
+          user.id,
+          assistant.id.toString()
+        );
+
+      if (conversations.length > 0) {
+        // Load the most recent conversation
+        const latestConversation = conversations[0];
+        const conversationWithMessages =
+          await ConversationService.getConversationWithMessages(
+            latestConversation.id!
+          );
+        setCurrentConversation(conversationWithMessages);
+
+        // Convert conversation messages to MESSAGE format
+        if (conversationWithMessages.messages) {
+          const convertedMessages = conversationWithMessages.messages.map(
+            (msg) => ({
+              role: msg.role,
+              content: msg.content,
+            })
+          );
+          setMessages(convertedMessages);
+        }
+      }
+    } catch (error) {
+      console.error("Error loading conversation:", error);
+      // If there's an error, just continue without loading previous messages
+    }
+  };
+
+  const createNewConversation = async (): Promise<Conversation | null> => {
+    if (!assistant || !user) return null;
+
+    try {
+      const conversation = await ConversationService.createConversation({
+        userId: user.id,
+        assistantId: assistant.id.toString(),
+        title: `Chat with ${assistant.name}`,
+      });
+      setCurrentConversation(conversation);
+      return conversation;
+    } catch (error) {
+      console.error("Error creating conversation:", error);
+      return null;
+    }
+  };
+
+  const saveMessageToConversation = async (
+    role: "user" | "assistant",
+    content: string
+  ) => {
+    if (!currentConversation && role === "user") {
+      // Create new conversation for the first user message
+      const newConversation = await createNewConversation();
+      if (!newConversation) return;
+    }
+
+    if (currentConversation) {
+      try {
+        await ConversationService.addMessage({
+          conversationId: currentConversation.id!,
+          role,
+          content,
+        });
+      } catch (error) {
+        console.error("Error saving message:", error);
+        // Continue without saving to avoid blocking the chat
+      }
+    }
+  };
 
   const onSendMessage = async (inputSuggestion?: string) => {
     setLoading(true);
+    const userInput = inputSuggestion ?? input;
+
     setMessages((prev) => [
       ...prev,
       {
         role: "user",
-        content: inputSuggestion ?? input,
+        content: userInput,
       },
       {
-        role: "assitant",
+        role: "assistant",
         content: "Loading...",
       },
     ]);
 
-    const userInput = inputSuggestion ?? input;
     inputRef.current?.focus(); // Keep focus on input
     setInput("");
+
+    // Save user message to conversation
+    await saveMessageToConversation("user", userInput);
 
     try {
       const AIModel = AiModelOptions.find(
@@ -85,28 +177,38 @@ function ChatUi() {
       if (result.data) {
         setMessages((prev) => [...prev, result.data]);
         updateUserToken(result.data?.content);
+
+        // Save assistant response to conversation
+        await saveMessageToConversation("assistant", result.data.content);
       } else {
         // Handle case where API didn't return expected data
+        const errorMessage =
+          "Sorry, I encountered an error processing your request.";
         setMessages((prev) => [
           ...prev,
           {
             role: "assistant",
-            content: "Sorry, I encountered an error processing your request.",
+            content: errorMessage,
           },
         ]);
+        // Save error message to conversation
+        await saveMessageToConversation("assistant", errorMessage);
       }
     } catch (error) {
       console.error("Error calling AI API:", error);
       setLoading(false);
       setMessages((prev) => prev.slice(0, -1));
+      const errorMessage =
+        "Sorry, I encountered an error processing your request. Please try again.";
       setMessages((prev) => [
         ...prev,
         {
           role: "assistant",
-          content:
-            "Sorry, I encountered an error processing your request. Please try again.",
+          content: errorMessage,
         },
       ]);
+      // Save error message to conversation
+      await saveMessageToConversation("assistant", errorMessage);
     }
   };
 

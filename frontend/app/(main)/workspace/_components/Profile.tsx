@@ -15,12 +15,12 @@ import { Button } from "@/components/ui/button";
 import { Loader2Icon, WalletCardsIcon } from "lucide-react";
 import axios from "axios";
 import { toast } from "sonner";
-import { updateUserTokens } from "@/services/database";
 
 function Profile({ openDialog, setOpenDialog }: any) {
   const { user } = useContext(AuthContext);
   const [loading, setLoading] = useState(false);
   const [maxToken, setMaxToken] = useState<number>(0);
+
   useEffect(() => {
     if (user?.orderId) {
       setMaxToken(500000);
@@ -29,72 +29,69 @@ function Profile({ openDialog, setOpenDialog }: any) {
     }
   }, [user]);
 
-  useEffect(() => {
-    const script = document.createElement("script");
-    script.src = "https://checkout.razorpay.com/v1/checkout.js";
-    script.async = true;
-    script.onload = () => console.log(true); // Ensure script is loaded
-    document.body.appendChild(script);
-
-    return () => {
-      document.body.removeChild(script);
-    };
-  }, []);
-
-  const GenerateSubscriptionId = async () => {
+  const initiateSSLCommerzPayment = async () => {
     setLoading(true);
-    const result = await axios.post("/api/create-subscription");
-    console.log(result.data);
-    MakePayment(result?.data?.id);
-    setLoading(false);
-  };
+    try {
+      console.log("User ID:", user?.id);
+      console.log("User ID type:", typeof user?.id);
 
-  const MakePayment = (subscriptionId: string) => {
-    let options = {
-      key: process.env.NEXT_PUBLIC_RAZORPAY_LIVE_KEY!,
-      subscription_id: subscriptionId,
-      name: "Tubeguruji AI Assistant App",
-      description: "",
-      image: "/logo.svg",
-      handler: async function (resp: any) {
-        console.log(resp.razorpay_payment_id);
-        console.log(resp);
-        if (resp?.razorpay_payment_id) {
-          try {
-            await updateUserTokens(
-              user?.id,
-              user.credits + 500000,
-              resp.razorpay_subscription_id
-            );
-            toast("Thank You! Credits Added");
-          } catch (error) {
-            console.error("Error updating user order:", error);
-            toast("Error updating credits");
-          }
-        }
-      },
-      prefill: {
-        name: user?.name,
-        email: user?.email,
-      },
-      notes: {},
-      theme: {
-        color: "#000000",
-      },
-    };
+      const paymentRequest = {
+        userId: user?.id,
+        totalAmount: 800.0, // 800 BDT (approximately $10)
+        currency: "BDT",
+        customerName: user?.name || "",
+        customerEmail: user?.email || "",
+        customerPhone: "01700000000", // Default phone, should be collected from user
+        customerAddress: "Dhaka, Bangladesh",
+        customerCity: "Dhaka",
+        customerState: "Dhaka",
+        customerPostcode: "1000",
+        customerCountry: "Bangladesh",
+        productName: "NexusAI Pro Plan",
+        productCategory: "Digital Service",
+        productProfile: "general",
+      };
 
-    //@ts-ignore
-    const rzp = new window.Razorpay(options);
-    rzp.open();
+      console.log("Payment request:", paymentRequest);
+
+      const response = await axios.post(
+        "/api/payment/initiate",
+        paymentRequest
+      );
+
+      if (response.data.success && response.data.gatewayPageUrl) {
+        // Redirect to SSLCommerz payment gateway
+        window.location.href = response.data.gatewayPageUrl;
+      } else {
+        toast.error(
+          "Payment initiation failed: " +
+            (response.data.message || "Unknown error")
+        );
+      }
+    } catch (error: any) {
+      console.error("Payment initiation error:", error);
+      toast.error("Payment initiation failed. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const cancelSubscription = async () => {
-    const result = await axios.post("/api/cancel-subscription", {
-      subId: user?.orderId,
-    });
-    console.log(result);
-    toast("Subscription Canceled");
-    window.location.reload();
+    try {
+      // Since we're not using subscription model with SSLCommerz,
+      // we just need to reset the user's order ID
+      // You might want to implement this endpoint in your backend
+      const response = await axios.post("/api/cancel-subscription", {
+        userId: user?.id,
+        orderId: user?.orderId,
+      });
+
+      toast.success("Subscription Canceled");
+      window.location.reload();
+    } catch (error) {
+      console.error("Cancel subscription error:", error);
+      toast.error("Failed to cancel subscription");
+    }
   };
 
   return (
@@ -140,13 +137,13 @@ function Profile({ openDialog, setOpenDialog }: any) {
                       <h2 className="font-bold text-lg"> Pro Plan</h2>
                       <h2>500,000 Tokens</h2>
                     </div>
-                    <h2 className="font-bold text-lg">$10/month</h2>
+                    <h2 className="font-bold text-lg">৳800/month</h2>
                   </div>
                   <hr className="my-3" />
                   <Button
                     className="w-full"
                     disabled={loading}
-                    onClick={GenerateSubscriptionId}
+                    onClick={initiateSSLCommerzPayment}
                   >
                     {" "}
                     {loading ? (
@@ -154,7 +151,7 @@ function Profile({ openDialog, setOpenDialog }: any) {
                     ) : (
                       <WalletCardsIcon />
                     )}{" "}
-                    Upgrade (10$)
+                    Upgrade (৳800)
                   </Button>
                 </div>
               ) : (

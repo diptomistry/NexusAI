@@ -151,24 +151,17 @@ function ChatUi() {
 
       let result;
 
-      // Use direct Gemini API for Gemini models, Eden AI for others
-      if (
-        assistant.aiModelId?.includes("Gemini") ||
-        assistant.aiModelId?.includes("Google")
-      ) {
-        console.log("Using direct Gemini API");
-        result = await axios.post("/api/gemini-ai-model", {
-          userInput: userInput + ":-" + assistant?.userInstruction,
-          aiResp: messages[messages?.length - 1]?.content,
-        });
-      } else {
-        console.log("Using Eden AI for provider:", AIModel?.edenAi);
-        result = await axios.post("/api/eden-ai-model", {
-          provider: AIModel?.edenAi,
-          userInput: userInput + ":-" + assistant?.userInstruction,
-          aiResp: messages[messages?.length - 1]?.content,
-        });
-      }
+      // Use the new Spring Boot AI endpoint for all models
+      console.log(
+        "Using Spring Boot AI Service for provider:",
+        AIModel?.replicateModel
+      );
+      result = await axios.post("http://localhost:8080/api/ai/chat", {
+        provider: AIModel?.replicateModel,
+        userInput: userInput,
+        aiResp: messages[messages?.length - 1]?.content,
+        assistantInstruction: assistant?.userInstruction,
+      });
 
       setLoading(false);
       setMessages((prev) => prev.slice(0, -1));

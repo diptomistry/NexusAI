@@ -1,41 +1,38 @@
 export default [
-    {
-        id: 1,
-        name: 'Google: Gemini 2.0 Flash',
-        edenAi: 'google/gemini-2.0-flash',
-        // model: 'google/gemini-2.0-flash-lite-001',//OpenRouter.ai
-        logo: '/google.png'
-    },
-    {
-        id: 2,
-        name: 'OpenAI: GPT-4o-mini',
-        edenAi: 'openai/gpt-4o-mini',
-        // model: 'openai/gpt-4o-mini',//OpenRouter.ai
-        logo: '/chatgpt.png'
-
-    },
-    {
-        id: 3,
-        name: 'OpenAI: GPT-3.5 Turbo',
-        edenAi: 'openai/gpt-4o-mini',
-        // model: 'openai/gpt-3.5-turbo',//OpenRouter.ai
-        logo: '/chatgpt.png'
-    },
-    {
-        id: 4,
-        name: 'Mistral: Saba',
-        edenAi: 'mistral/pixtral-large-latest',
-        // model: 'mistralai/mistral-saba',//OpenRouter.ai
-        logo: '/Mistral.png'
-
-    },
-    {
-        id: 5,
-        name: 'anthropic',
-        edenAi: 'anthropic/claude-3-5-haiku-latest',
-        // model: 'mistralai/mistral-saba',//OpenRouter.ai
-        logo: '/anthropic.png'
-
-    },
-
-] 
+  {
+    id: 1,
+    name: "Google: Gemini 2.0 Flash",
+    replicateModel: "google/gemini-2.0-flash", // Use Gemini directly, not through Replicate
+    logo: "/google.png",
+  },
+  {
+    id: 2,
+    name: "OpenAI: GPT-4o-mini",
+    replicateModel: "openai/o4-mini",
+    logo: "/chatgpt.png",
+  },
+  {
+    id: 3,
+    name: "OpenAI: GPT-5",
+    replicateModel: "openai/gpt-5",
+    logo: "/chatgpt.png",
+  },
+  {
+    id: 4,
+    name: "Anthropic: Claude 4 Sonnet",
+    replicateModel: "anthropic/claude-4-sonnet",
+    logo: "/anthropic.png",
+  },
+  {
+    id: 5,
+    name: "Anthropic: Claude 3.7 Sonnet",
+    replicateModel: "anthropic/claude-3.7-sonnet",
+    logo: "/anthropic.png",
+  },
+  {
+    id: 6,
+    name: "DeepSeek: DeepSeek V3",
+    replicateModel: "deepseek-ai/deepseek-v3",
+    logo: "/deepseek.png",
+  },
+];

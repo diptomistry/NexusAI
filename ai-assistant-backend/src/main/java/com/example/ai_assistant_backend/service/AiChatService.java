@@ -79,7 +79,7 @@ public class AiChatService {
             System.out.println("User input: " + input);
             System.out.println("Assistant instruction: " + assistantInstruction);
             System.out.println("Model version: " + getModelVersion(model));
-            
+
             // Step 1: Create a prediction
             String url = "https://api.replicate.com/v1/predictions";
 
@@ -104,7 +104,7 @@ public class AiChatService {
                 inputParams.put("prompt", fullPrompt);
                 inputParams.put("max_tokens", 4096);
                 inputParams.put("temperature", 0.7);
-                
+
             } else if (model.contains("anthropic")) {
                 // Anthropic models (Claude)
                 String systemPrompt = "You are a helpful assistant.";
@@ -114,7 +114,7 @@ public class AiChatService {
                 inputParams.put("system_prompt", systemPrompt);
                 inputParams.put("max_tokens", 4096);
                 inputParams.put("temperature", 0.7);
-                
+
             } else if (model.contains("openai")) {
                 // OpenAI models
                 String systemPrompt = "You are a helpful assistant.";
@@ -123,7 +123,7 @@ public class AiChatService {
                 }
                 inputParams.put("system_prompt", systemPrompt);
                 inputParams.put("reasoning_effort", "medium");
-                
+
             } else {
                 // Default handling for other models
                 String systemPrompt = "You are a helpful assistant.";

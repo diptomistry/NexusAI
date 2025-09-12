@@ -7,6 +7,7 @@ This application requires sensitive configuration that should not be committed t
 ### Setup Instructions
 
 1. **Copy the example configuration:**
+
    ```bash
    cp src/main/resources/application-example.properties src/main/resources/application.properties
    ```

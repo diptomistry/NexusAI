@@ -19,18 +19,20 @@ function Workspace() {
 
   return (
     <div className="h-screen fixed w-full">
-      <div className="grid md:grid-cols-6 lg:grid-cols-6">
+      <div className="grid grid-cols-1 md:grid-cols-5 lg:grid-cols-5">
         <div className="hidden lg:block col-span-1">
           {/* Assistant List  */}
           <AssistantList />
         </div>
-        <div className="hidden lg:block col-span-1">
-          {/* Conversation History  */}
-          <ConversationList onSelectConversation={handleSelectConversation} />
-        </div>
-        <div className="md:col-span-4 lg:col-span-3">
-          {/* Chat Ui  */}
-          <ChatUi />
+        <div className="col-span-1 md:col-span-4 lg:col-span-3 flex flex-col">
+          {/* Conversation History at top */}
+          <div className="border-b bg-white">
+            <ConversationList onSelectConversation={handleSelectConversation} />
+          </div>
+          {/* Chat Ui below */}
+          <div className="flex-1">
+            <ChatUi />
+          </div>
         </div>
         <div className="hidden lg:block col-span-1">
           {/* Settings  */}

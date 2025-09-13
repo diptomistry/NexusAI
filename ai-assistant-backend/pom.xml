@@ -90,6 +90,33 @@
 			   <groupId>org.springframework.boot</groupId>
 			   <artifactId>spring-boot-starter-validation</artifactId>
 		   </dependency>
+		   
+		   <!-- Document Processing Dependencies -->
+		   <!-- Apache Tika for text extraction from various file formats -->
+		   <dependency>
+			   <groupId>org.apache.tika</groupId>
+			   <artifactId>tika-core</artifactId>
+			   <version>2.9.1</version>
+		   </dependency>
+		   <dependency>
+			   <groupId>org.apache.tika</groupId>
+			   <artifactId>tika-parsers-standard-package</artifactId>
+			   <version>2.9.1</version>
+		   </dependency>
+		   
+		   <!-- File upload support -->
+		   <dependency>
+			   <groupId>commons-fileupload</groupId>
+			   <artifactId>commons-fileupload</artifactId>
+			   <version>1.5</version>
+		   </dependency>
+		   
+		   <!-- Text processing utilities -->
+		   <dependency>
+			   <groupId>org.apache.commons</groupId>
+			   <artifactId>commons-text</artifactId>
+			   <version>1.10.0</version>
+		   </dependency>
 	   </dependencies>
 
 	<build>

@@ -77,43 +77,67 @@ function ConversationList({ onSelectConversation }: ConversationListProps) {
   }
 
   return (
-    <div className="p-4">
-      <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-        <MessageCircle className="w-5 h-5" />
-        Chat History
-      </h3>
-
+    <div className="p-2 sm:p-3 border-b bg-white">
       {conversations.length === 0 ? (
-        <p className="text-gray-500 text-sm">No previous conversations</p>
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+          <h3 className="text-sm font-medium flex items-center gap-2">
+            <MessageCircle className="w-4 h-4" />
+            Chat History
+          </h3>
+          <p className="text-gray-500 text-xs">No previous conversations</p>
+        </div>
       ) : (
-        <div className="space-y-2">
-          {conversations.map((conversation) => (
-            <div
-              key={conversation.id}
-              onClick={() => onSelectConversation(conversation)}
-              className="p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors group"
-            >
-              <div className="flex justify-between items-start">
-                <div className="flex-1">
-                  <h4 className="font-medium text-sm truncate">
-                    {conversation.title}
-                  </h4>
-                  <p className="text-xs text-gray-500 mt-1">
-                    {conversation.updatedAt &&
-                      formatDate(conversation.updatedAt)}
-                  </p>
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+          <h3 className="text-sm font-medium flex items-center gap-2 flex-shrink-0">
+            <MessageCircle className="w-4 h-4" />
+            Chat History
+          </h3>
+          <div className="flex gap-2 overflow-x-auto pb-1 flex-1">
+            {conversations.slice(0, 5).map((conversation) => (
+              <div
+                key={conversation.id}
+                onClick={() => onSelectConversation(conversation)}
+                className="flex-shrink-0 p-2 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors group min-w-[140px] sm:min-w-[180px] lg:min-w-[200px] max-w-[180px] sm:max-w-[220px] lg:max-w-[250px]"
+              >
+                <div className="flex justify-between items-start">
+                  <div className="flex-1 min-w-0">
+                    <h4
+                      className="font-medium text-xs truncate"
+                      title={conversation.title}
+                    >
+                      {conversation.title}
+                    </h4>
+                    <p className="text-xs text-gray-500 mt-1 hidden sm:block">
+                      {conversation.updatedAt &&
+                        formatDate(conversation.updatedAt)}
+                    </p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={(e) =>
+                      handleDeleteConversation(conversation.id!, e)
+                    }
+                    className="opacity-0 group-hover:opacity-100 transition-opacity p-1 h-auto ml-1"
+                  >
+                    <Trash2 className="w-3 h-3 text-red-500" />
+                  </Button>
                 </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={(e) => handleDeleteConversation(conversation.id!, e)}
-                  className="opacity-0 group-hover:opacity-100 transition-opacity p-1 h-auto"
-                >
-                  <Trash2 className="w-4 h-4 text-red-500" />
-                </Button>
               </div>
-            </div>
-          ))}
+            ))}
+            {conversations.length > 5 && (
+              <div className="flex-shrink-0 flex items-center justify-center p-2 text-xs text-gray-500 border rounded-lg min-w-[60px] sm:min-w-[80px]">
+                <span className="hidden sm:inline">
+                  +{conversations.length - 5} more
+                </span>
+                <span className="sm:hidden">+{conversations.length - 5}</span>
+              </div>
+            )}
+          </div>
+          <span className="text-xs text-gray-500 flex-shrink-0 hidden sm:block">
+            {conversations.length} conversation
+            {conversations.length !== 1 ? "s" : ""}
+          </span>
         </div>
       )}
     </div>

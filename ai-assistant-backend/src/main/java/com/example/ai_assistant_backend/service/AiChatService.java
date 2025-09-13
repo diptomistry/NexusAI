@@ -4,6 +4,7 @@ import com.example.ai_assistant_backend.dto.AiChatRequest;
 import com.example.ai_assistant_backend.dto.AiChatResponse;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -28,6 +29,9 @@ public class AiChatService {
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
 
+    @Autowired
+    private DocumentService documentService;
+
     public AiChatService() {
         this.restTemplate = new RestTemplate();
         this.objectMapper = new ObjectMapper();
@@ -38,21 +42,27 @@ public class AiChatService {
             String provider = request.getProvider();
             String userInput = request.getUserInput();
             String assistantInstruction = request.getAssistantInstruction();
+            String userId = request.getUserId();
+            String assistantId = request.getAssistantId();
 
             System.out.println("Received request for provider: " + provider);
             System.out.println("User input: " + userInput);
             System.out.println("Assistant instruction: " + assistantInstruction);
 
+            // Get document context if user and assistant are provided
+            String documentContext = "";
+            if (userId != null && assistantId != null) {
+                documentContext = documentService.getRelevantDocumentContext(userId, assistantId, userInput);
+                System.out.println("Document context retrieved: " + (documentContext.length() > 0 ? "Yes" : "No"));
+            }
+
             // Check if it's a Gemini model
             if (provider != null && (provider.contains("google") || provider.contains("gemini"))) {
-                String fullInput = userInput;
-                if (assistantInstruction != null && !assistantInstruction.isEmpty()) {
-                    fullInput = userInput + ":-" + assistantInstruction;
-                }
+                String fullInput = buildFullInput(userInput, assistantInstruction, documentContext);
                 return generateGeminiResponse(fullInput, request.getAiResp());
             } else {
                 // Use Replicate for all other models (OpenAI, Mistral, Anthropic, etc.)
-                return generateReplicateResponse(provider, userInput, assistantInstruction);
+                return generateReplicateResponse(provider, userInput, assistantInstruction, documentContext);
             }
 
         } catch (Exception e) {
@@ -62,7 +72,47 @@ public class AiChatService {
         }
     }
 
-    private AiChatResponse generateReplicateResponse(String model, String input, String assistantInstruction) {
+    private String buildFullInput(String userInput, String assistantInstruction, String documentContext) {
+        StringBuilder fullInput = new StringBuilder();
+
+        // Add document context first if available
+        if (documentContext != null && !documentContext.trim().isEmpty()) {
+            fullInput.append(documentContext).append("\n\n");
+        }
+
+        // Add user input
+        fullInput.append(userInput);
+
+        // Add assistant instruction as context
+        if (assistantInstruction != null && !assistantInstruction.isEmpty()) {
+            fullInput.append(":-").append(assistantInstruction);
+        }
+
+        return fullInput.toString();
+    }
+
+    private String buildFullPromptForModel(String input, String assistantInstruction, String documentContext) {
+        StringBuilder fullPrompt = new StringBuilder();
+
+        // Add document context first if available
+        if (documentContext != null && !documentContext.trim().isEmpty()) {
+            fullPrompt.append("Context from uploaded documents:\n");
+            fullPrompt.append(documentContext).append("\n\n");
+        }
+
+        // Add assistant instruction
+        if (assistantInstruction != null && !assistantInstruction.isEmpty()) {
+            fullPrompt.append("Instructions: ").append(assistantInstruction).append("\n\n");
+        }
+
+        // Add user input
+        fullPrompt.append("User: ").append(input).append("\nAssistant:");
+
+        return fullPrompt.toString();
+    }
+
+    private AiChatResponse generateReplicateResponse(String model, String input, String assistantInstruction,
+            String documentContext) {
         if (replicateApiKey == null || replicateApiKey.isEmpty()) {
             return new AiChatResponse("assistant",
                     "AI service is not configured properly. Please check the server configuration.");
@@ -78,6 +128,7 @@ public class AiChatService {
             System.out.println("Making Replicate API call for model: " + model);
             System.out.println("User input: " + input);
             System.out.println("Assistant instruction: " + assistantInstruction);
+            System.out.println("Document context length: " + (documentContext != null ? documentContext.length() : 0));
             System.out.println("Model version: " + getModelVersion(model));
 
             // Step 1: Create a prediction
@@ -97,20 +148,22 @@ public class AiChatService {
             // Model-specific parameter handling
             if (model.contains("deepseek")) {
                 // DeepSeek models might use different parameters
-                String fullPrompt = input;
-                if (assistantInstruction != null && !assistantInstruction.isEmpty()) {
-                    fullPrompt = assistantInstruction + "\n\nUser: " + input + "\nAssistant:";
-                }
+                String fullPrompt = buildFullPromptForModel(input, assistantInstruction, documentContext);
                 inputParams.put("prompt", fullPrompt);
                 inputParams.put("max_tokens", 4096);
                 inputParams.put("temperature", 0.7);
-
             } else if (model.contains("anthropic")) {
                 // Anthropic models (Claude)
                 String systemPrompt = "You are a helpful assistant.";
                 if (assistantInstruction != null && !assistantInstruction.isEmpty()) {
                     systemPrompt = assistantInstruction;
                 }
+
+                // Add document context to system prompt if available
+                if (documentContext != null && !documentContext.trim().isEmpty()) {
+                    systemPrompt += "\n\nRelevant document context:\n" + documentContext;
+                }
+
                 inputParams.put("system_prompt", systemPrompt);
                 inputParams.put("max_tokens", 4096);
                 inputParams.put("temperature", 0.7);
@@ -121,6 +174,12 @@ public class AiChatService {
                 if (assistantInstruction != null && !assistantInstruction.isEmpty()) {
                     systemPrompt = assistantInstruction;
                 }
+
+                // Add document context to system prompt if available
+                if (documentContext != null && !documentContext.trim().isEmpty()) {
+                    systemPrompt += "\n\nRelevant document context:\n" + documentContext;
+                }
+
                 inputParams.put("system_prompt", systemPrompt);
                 inputParams.put("reasoning_effort", "medium");
 
@@ -130,6 +189,12 @@ public class AiChatService {
                 if (assistantInstruction != null && !assistantInstruction.isEmpty()) {
                     systemPrompt = assistantInstruction;
                 }
+
+                // Add document context to system prompt if available
+                if (documentContext != null && !documentContext.trim().isEmpty()) {
+                    systemPrompt += "\n\nRelevant document context:\n" + documentContext;
+                }
+
                 inputParams.put("system_prompt", systemPrompt);
                 inputParams.put("max_tokens", 4096);
                 inputParams.put("temperature", 0.7);

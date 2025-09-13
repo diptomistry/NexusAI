@@ -161,6 +161,8 @@ function ChatUi() {
         userInput: userInput,
         aiResp: messages[messages?.length - 1]?.content,
         assistantInstruction: assistant?.userInstruction,
+        userId: user?.id,
+        assistantId: assistant?.id?.toString(),
       });
 
       setLoading(false);
@@ -234,7 +236,7 @@ function ChatUi() {
     }
   };
   return (
-    <div className="mt-20 p-6 relative h-[88vh]">
+    <div className="mt-2 p-6 relative h-[88vh]">
       {messages?.length == 0 && (
         <EmptyChatState
           sendMessage={(input: string) => {

@@ -9,9 +9,13 @@ import { Button } from "@/components/ui/button";
 
 interface ConversationListProps {
   onSelectConversation: (conversation: Conversation) => void;
+  onDeleteConversation?: (conversationId: number) => void;
 }
 
-function ConversationList({ onSelectConversation }: ConversationListProps) {
+function ConversationList({
+  onSelectConversation,
+  onDeleteConversation,
+}: ConversationListProps) {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(false);
   const { user } = useContext(AuthContext);
@@ -52,6 +56,8 @@ function ConversationList({ onSelectConversation }: ConversationListProps) {
       setConversations((prev) =>
         prev.filter((conv) => conv.id !== conversationId)
       );
+      // Notify parent component about the deletion
+      onDeleteConversation?.(conversationId);
     } catch (error) {
       console.error("Error deleting conversation:", error);
     }

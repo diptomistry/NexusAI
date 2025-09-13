@@ -18,7 +18,12 @@ type MESSAGE = {
   role: string;
   content: string;
 };
-function ChatUi() {
+
+interface ChatUiProps {
+  deletedConversationId?: number | null;
+}
+
+function ChatUi({ deletedConversationId }: ChatUiProps) {
   const [input, setInput] = useState<string>("");
   const { assistant, setAssistant } = useContext(AssistantContext);
   const [messages, setMessages] = useState<MESSAGE[]>([]);
@@ -43,6 +48,18 @@ function ChatUi() {
       loadOrCreateConversation();
     }
   }, [assistant?.id]);
+
+  // Handle external conversation deletion
+  useEffect(() => {
+    if (
+      deletedConversationId &&
+      currentConversation?.id === deletedConversationId
+    ) {
+      // The current conversation was deleted, clear the UI
+      setCurrentConversation(null);
+      setMessages([]);
+    }
+  }, [deletedConversationId, currentConversation?.id]);
 
   const loadOrCreateConversation = async () => {
     if (!assistant || !user) return;
@@ -98,30 +115,6 @@ function ChatUi() {
     }
   };
 
-  const saveMessageToConversation = async (
-    role: "user" | "assistant",
-    content: string
-  ) => {
-    if (!currentConversation && role === "user") {
-      // Create new conversation for the first user message
-      const newConversation = await createNewConversation();
-      if (!newConversation) return;
-    }
-
-    if (currentConversation) {
-      try {
-        await ConversationService.addMessage({
-          conversationId: currentConversation.id!,
-          role,
-          content,
-        });
-      } catch (error) {
-        console.error("Error saving message:", error);
-        // Continue without saving to avoid blocking the chat
-      }
-    }
-  };
-
   const onSendMessage = async (inputSuggestion?: string) => {
     setLoading(true);
     const userInput = inputSuggestion ?? input;
@@ -141,8 +134,26 @@ function ChatUi() {
     inputRef.current?.focus(); // Keep focus on input
     setInput("");
 
+    // Ensure we have a conversation before saving messages
+    let conversationToUse = currentConversation;
+    if (!conversationToUse) {
+      conversationToUse = await createNewConversation();
+      if (!conversationToUse) {
+        setLoading(false);
+        return;
+      }
+    }
+
     // Save user message to conversation
-    await saveMessageToConversation("user", userInput);
+    try {
+      await ConversationService.addMessage({
+        conversationId: conversationToUse.id!,
+        role: "user",
+        content: userInput,
+      });
+    } catch (error) {
+      console.error("Error saving user message:", error);
+    }
 
     try {
       const AIModel = AiModelOptions.find(
@@ -174,7 +185,17 @@ function ChatUi() {
         updateUserToken(result.data?.content);
 
         // Save assistant response to conversation
-        await saveMessageToConversation("assistant", result.data.content);
+        if (conversationToUse?.id) {
+          try {
+            await ConversationService.addMessage({
+              conversationId: conversationToUse.id,
+              role: "assistant",
+              content: result.data.content,
+            });
+          } catch (error) {
+            console.error("Error saving assistant message:", error);
+          }
+        }
       } else {
         // Handle case where API didn't return expected data
         const errorMessage =
@@ -187,7 +208,17 @@ function ChatUi() {
           },
         ]);
         // Save error message to conversation
-        await saveMessageToConversation("assistant", errorMessage);
+        if (conversationToUse?.id) {
+          try {
+            await ConversationService.addMessage({
+              conversationId: conversationToUse.id,
+              role: "assistant",
+              content: errorMessage,
+            });
+          } catch (error) {
+            console.error("Error saving error message:", error);
+          }
+        }
       }
     } catch (error) {
       console.error("Error calling AI API:", error);
@@ -203,7 +234,17 @@ function ChatUi() {
         },
       ]);
       // Save error message to conversation
-      await saveMessageToConversation("assistant", errorMessage);
+      if (conversationToUse?.id) {
+        try {
+          await ConversationService.addMessage({
+            conversationId: conversationToUse.id,
+            role: "assistant",
+            content: errorMessage,
+          });
+        } catch (error) {
+          console.error("Error saving error message:", error);
+        }
+      }
     }
   };
 

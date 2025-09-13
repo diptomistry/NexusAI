@@ -11,10 +11,24 @@ import { Conversation } from "@/types/conversation";
 function Workspace() {
   const [selectedConversation, setSelectedConversation] =
     useState<Conversation | null>(null);
+  const [deletedConversationId, setDeletedConversationId] = useState<
+    number | null
+  >(null);
 
   const handleSelectConversation = (conversation: Conversation) => {
     setSelectedConversation(conversation);
     // TODO: Load this conversation in ChatUi
+  };
+
+  const handleDeleteConversation = (conversationId: number) => {
+    // If the deleted conversation is currently selected, clear it
+    if (selectedConversation?.id === conversationId) {
+      setSelectedConversation(null);
+    }
+    // Notify ChatUi about the deletion
+    setDeletedConversationId(conversationId);
+    // Reset the deletion ID after a short delay to allow ChatUi to process it
+    setTimeout(() => setDeletedConversationId(null), 100);
   };
 
   return (
@@ -27,11 +41,14 @@ function Workspace() {
         <div className="col-span-1 md:col-span-4 lg:col-span-3 flex flex-col">
           {/* Conversation History at top */}
           <div className="border-b bg-white">
-            <ConversationList onSelectConversation={handleSelectConversation} />
+            <ConversationList
+              onSelectConversation={handleSelectConversation}
+              onDeleteConversation={handleDeleteConversation}
+            />
           </div>
           {/* Chat Ui below */}
           <div className="flex-1">
-            <ChatUi />
+            <ChatUi deletedConversationId={deletedConversationId} />
           </div>
         </div>
         <div className="hidden lg:block col-span-1">

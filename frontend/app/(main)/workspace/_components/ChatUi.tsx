@@ -58,6 +58,11 @@ function ChatUi({ deletedConversationId }: ChatUiProps) {
       // The current conversation was deleted, clear the UI
       setCurrentConversation(null);
       setMessages([]);
+
+      // Reload conversations to show the next available one (if any)
+      setTimeout(() => {
+        loadOrCreateConversation();
+      }, 100);
     }
   }, [deletedConversationId, currentConversation?.id]);
 

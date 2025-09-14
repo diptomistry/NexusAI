@@ -102,13 +102,14 @@ const DocumentManager: React.FC = () => {
       formData.append("assistantId", assistant.id.toString());
 
       const response = await axios.post<DocumentUploadResponse>(
-        "http://localhost:8080/api/documents/upload",
+        "http://localhost:8080/api/vector-documents/upload",  // Changed this line
         formData,
         {
           headers: {
             "Content-Type": "multipart/form-data",
           },
         }
+      
       );
 
       if (response.data.success) {

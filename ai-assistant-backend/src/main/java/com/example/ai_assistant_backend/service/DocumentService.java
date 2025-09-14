@@ -4,10 +4,14 @@ import com.example.ai_assistant_backend.dto.DocumentDTO;
 import com.example.ai_assistant_backend.dto.DocumentUploadResponse;
 import com.example.ai_assistant_backend.model.Document;
 import com.example.ai_assistant_backend.repository.DocumentRepository;
+import com.example.ai_assistant_backend.repository.DocumentChunkRepository;
 import org.apache.tika.Tika;
 import org.apache.tika.exception.TikaException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -22,8 +26,13 @@ import java.util.stream.Collectors;
 @Service
 public class DocumentService {
 
+    private static final Logger logger = LoggerFactory.getLogger(DocumentService.class);
+
     @Autowired
     private DocumentRepository documentRepository;
+
+    @Autowired
+    private DocumentChunkRepository documentChunkRepository;
 
     private final Tika tika = new Tika();
     private final String uploadDir = "uploads/documents";
@@ -136,21 +145,34 @@ public class DocumentService {
                 .collect(Collectors.toList());
     }
 
+    @Transactional
     public boolean deleteDocument(Long documentId, String userId) {
         Optional<Document> documentOpt = documentRepository.findById(documentId);
         if (documentOpt.isPresent() && documentOpt.get().getUserId().equals(userId)) {
             Document document = documentOpt.get();
+
+            // Delete associated document chunks first to avoid foreign key constraint
+            // violation
+            try {
+                documentChunkRepository.deleteByDocumentId(documentId);
+                logger.info("Deleted document chunks for document ID: {}", documentId);
+            } catch (Exception e) {
+                logger.error("Failed to delete document chunks for document {}: {}", documentId, e.getMessage(), e);
+                throw new RuntimeException("Failed to delete document chunks: " + e.getMessage(), e);
+            }
 
             // Delete file from disk
             try {
                 Path filePath = Paths.get(document.getFilePath());
                 Files.deleteIfExists(filePath);
             } catch (IOException e) {
-                System.err.println("Failed to delete file from disk: " + e.getMessage());
+                logger.warn("Failed to delete file from disk: {}", e.getMessage());
+                // Don't fail the entire operation if file deletion fails
             }
 
             // Delete from database
             documentRepository.delete(document);
+            logger.info("Successfully deleted document ID: {}", documentId);
             return true;
         }
         return false;

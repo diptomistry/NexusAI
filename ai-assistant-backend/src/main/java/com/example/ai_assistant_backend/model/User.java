@@ -18,8 +18,11 @@ public class User {
 
     private String picture;
 
-    @Column(name = "credits", columnDefinition = "INTEGER DEFAULT 10000")
-    private Integer credits = 10000;
+    @Column(name = "credits", columnDefinition = "INTEGER DEFAULT 5000")
+    private Integer credits = 5000;
+
+    @Column(name = "max_credits", columnDefinition = "INTEGER DEFAULT 5000")
+    private Integer maxCredits = 5000;
 
     @Column(name = "order_id")
     private String orderId;
@@ -63,6 +66,14 @@ public class User {
 
     public void setCredits(Integer credits) {
         this.credits = credits;
+    }
+
+    public Integer getMaxCredits() {
+        return maxCredits;
+    }
+
+    public void setMaxCredits(Integer maxCredits) {
+        this.maxCredits = maxCredits;
     }
 
     public String getOrderId() {

@@ -25,7 +25,7 @@ function Profile({ openDialog, setOpenDialog }: any) {
     if (user?.orderId) {
       setMaxToken(500000);
     } else {
-      setMaxToken(10000);
+      setMaxToken(5000);
     }
   }, [user]);
 
@@ -118,10 +118,31 @@ function Profile({ openDialog, setOpenDialog }: any) {
               <hr className="my-3"></hr>
               <div className="flex flex-col gap-2">
                 <h2 className="font-bold">Token Usage</h2>
-                <h2>
-                  {user?.credits}/{maxToken}
-                </h2>
-                <Progress value={(user?.credits / maxToken) * 100} />
+                {(() => {
+                  const remainingCredits =
+                    typeof user?.credits === "number" ? user.credits : 0;
+                  const totalCredits =
+                    typeof user?.max_credits === "number" &&
+                    user.max_credits > 0
+                      ? user.max_credits
+                      : typeof maxToken === "number"
+                      ? maxToken
+                      : 0;
+                  const usedCredits = Math.max(
+                    0,
+                    Math.min(totalCredits, totalCredits - remainingCredits)
+                  );
+                  const progress =
+                    totalCredits > 0 ? (usedCredits / totalCredits) * 100 : 0;
+                  return (
+                    <>
+                      <h2>
+                        {usedCredits}/{totalCredits}
+                      </h2>
+                      <Progress value={progress} />
+                    </>
+                  );
+                })()}
                 <h2 className="flex justify-between font-bold mt-3 text-lg">
                   Current Plan
                   <span className="p-1 bg-gray-100 rounded-md px-2 font-normal">

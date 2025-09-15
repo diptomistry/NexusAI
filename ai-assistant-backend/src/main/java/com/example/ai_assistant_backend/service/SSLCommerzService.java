@@ -221,6 +221,8 @@ public class SSLCommerzService {
             if (userOpt.isPresent()) {
                 User user = userOpt.get();
                 user.setCredits(user.getCredits() + payment.getCreditsAdded());
+                Integer currentMax = user.getMaxCredits() == null ? 0 : user.getMaxCredits();
+                user.setMaxCredits(currentMax + payment.getCreditsAdded());
                 user.setOrderId(payment.getTransactionId()); // Store transaction ID as order ID
                 userRepository.save(user);
             }

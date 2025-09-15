@@ -35,8 +35,7 @@ public class SubscriptionController {
             if (userOpt.isPresent()) {
                 User user = userOpt.get();
                 user.setOrderId(null); // Remove order ID to downgrade to free plan
-                // Optionally, you might want to reset credits to free tier limit
-                // user.setCredits(10000);
+                // No credit limit reset on cancel as per requirement
                 userRepository.save(user);
 
                 return ResponseEntity.ok(Map.of(

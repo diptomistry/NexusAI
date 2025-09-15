@@ -18,7 +18,7 @@ export const createUser = async (userData: {
   // Create new user
   const { data, error } = await supabase
     .from('users')
-    .insert([userData])
+    .insert([{ ...userData, credits: 5000, max_credits: 5000 }])
     .select()
     .single()
 

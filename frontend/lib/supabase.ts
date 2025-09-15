@@ -12,6 +12,7 @@ export type User = {
   email: string
   picture: string
   credits: number
+  max_credits?: number
   order_id?: string
   created_at: string
   updated_at: string

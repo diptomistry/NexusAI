@@ -22,7 +22,7 @@ function Profile({ openDialog, setOpenDialog }: any) {
   const [maxToken, setMaxToken] = useState<number>(0);
 
   useEffect(() => {
-    if (user?.orderId) {
+    if (user?.order_id) {
       setMaxToken(500000);
     } else {
       setMaxToken(5000);
@@ -83,7 +83,7 @@ function Profile({ openDialog, setOpenDialog }: any) {
       // You might want to implement this endpoint in your backend
       const response = await axios.post("/api/cancel-subscription", {
         userId: user?.id,
-        orderId: user?.orderId,
+        orderId: user?.order_id,
       });
 
       toast.success("Subscription Canceled");
@@ -146,7 +146,7 @@ function Profile({ openDialog, setOpenDialog }: any) {
                 <h2 className="flex justify-between font-bold mt-3 text-lg">
                   Current Plan
                   <span className="p-1 bg-gray-100 rounded-md px-2 font-normal">
-                    {!user?.orderId ? "Free Plan" : "Pro Plan"}
+                    {!user?.order_id ? "Free Plan" : "Pro Plan"}
                   </span>{" "}
                 </h2>
               </div>

@@ -135,7 +135,7 @@ function AssistantList() {
             <div>
               <h2 className="font-bold">{user?.name}</h2>
               <h2 className="text-gray-400 text-sm">
-                {user?.orderId ? "Pro Plan" : "Free Plan"}
+                {user?.order_id ? "Pro Plan" : "Free Plan"}
               </h2>
             </div>
           </div>

@@ -9,6 +9,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import React, { useContext } from "react";
 import { createUser } from "@/services/database";
+import { supabase } from "@/lib/supabase";
 
 function SignIn() {
   const { user, setUser } = useContext(AuthContext);
@@ -27,6 +28,8 @@ function SignIn() {
           email: userData?.email,
           picture: userData.picture,
         });
+
+        // Note: Supabase RLS policies will be updated to allow uploads based on path
 
         setUser(result);
         router.replace("/ai-assistants");

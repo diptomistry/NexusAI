@@ -1,4 +1,5 @@
 import { supabase, User, UserAiAssistant } from '@/lib/supabase'
+import AiModelOptions from './AiModelOptions'
 
 // User functions
 export const createUser = async (userData: {
@@ -58,17 +59,25 @@ export const insertSelectedAssistants = async (
   assistants: any[],
   userId: string
 ): Promise<string[]> => {
-  const assistantsWithUserId = assistants.map(assistant => ({
-    assistant_id: assistant.id,
-    name: assistant.name,
-    title: assistant.title,
-    image: assistant.image,
-    instruction: assistant.instruction,
-    user_instruction: assistant.userInstruction,
-    sample_questions: assistant.sampleQuestions,
-    user_id: userId,
-    ai_model_id: 'Google: Gemini 2.0 Flash'
-  }))
+  const assistantsWithUserId = assistants.map(assistant => {
+    // Convert display name to replicate model for storage
+    const modelOption = AiModelOptions.find(
+      (model) => model.name === assistant.aiModelId
+    );
+    const replicateModel = modelOption ? modelOption.replicateModel : 'google/gemini-2.0-flash';
+    
+    return {
+      assistant_id: assistant.id,
+      name: assistant.name,
+      title: assistant.title,
+      image: assistant.image,
+      instruction: assistant.instruction,
+      user_instruction: assistant.userInstruction,
+      sample_questions: assistant.sampleQuestions,
+      user_id: userId,
+      ai_model_id: replicateModel
+    };
+  })
 
   const { data, error } = await supabase
     .from('user_ai_assistants')
@@ -95,11 +104,17 @@ export const updateUserAiAssistant = async (
   userInstruction: string,
   aiModelId: string
 ): Promise<void> => {
+  // Convert display name to replicate model for storage
+  const modelOption = AiModelOptions.find(
+    (model) => model.name === aiModelId
+  );
+  const replicateModel = modelOption ? modelOption.replicateModel : 'google/gemini-2.0-flash';
+  
   const { error } = await supabase
     .from('user_ai_assistants')
     .update({
       user_instruction: userInstruction,
-      ai_model_id: aiModelId
+      ai_model_id: replicateModel
     })
     .eq('id', id)
 

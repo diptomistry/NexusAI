@@ -7,6 +7,7 @@ import { SparklesText } from "@/components/magicui/sparkles-text";
 import ChatUi from "./_components/ChatUi";
 import ConversationList from "./_components/ConversationList";
 import { Conversation } from "@/types/conversation";
+import { UploadedImagesProvider } from "@/context/UploadedImagesContext";
 
 function Workspace() {
   const [selectedConversation, setSelectedConversation] =
@@ -32,31 +33,33 @@ function Workspace() {
   };
 
   return (
-    <div className="h-screen fixed w-full">
-      <div className="grid grid-cols-1 md:grid-cols-5 lg:grid-cols-5">
-        <div className="hidden lg:block col-span-1">
-          {/* Assistant List  */}
-          <AssistantList />
-        </div>
-        <div className="col-span-1 md:col-span-4 lg:col-span-3 flex flex-col">
-          {/* Conversation History at top */}
-          <div className="border-b bg-white">
-            <ConversationList
-              onSelectConversation={handleSelectConversation}
-              onDeleteConversation={handleDeleteConversation}
-            />
+    <UploadedImagesProvider>
+      <div className="h-screen fixed w-full">
+        <div className="grid grid-cols-1 md:grid-cols-5 lg:grid-cols-5">
+          <div className="hidden lg:block col-span-1">
+            {/* Assistant List  */}
+            <AssistantList />
           </div>
-          {/* Chat Ui below */}
-          <div className="flex-1">
-            <ChatUi deletedConversationId={deletedConversationId} />
+          <div className="col-span-1 md:col-span-4 lg:col-span-3 flex flex-col">
+            {/* Conversation History at top */}
+            <div className="border-b bg-white">
+              <ConversationList
+                onSelectConversation={handleSelectConversation}
+                onDeleteConversation={handleDeleteConversation}
+              />
+            </div>
+            {/* Chat Ui below */}
+            <div className="flex-1">
+              <ChatUi deletedConversationId={deletedConversationId} />
+            </div>
           </div>
-        </div>
-        <div className="hidden lg:block col-span-1">
-          {/* Settings  */}
-          <AssistantSettings />
+          <div className="hidden lg:block col-span-1">
+            {/* Settings  */}
+            <AssistantSettings />
+          </div>
         </div>
       </div>
-    </div>
+    </UploadedImagesProvider>
   );
 }
 

@@ -3,6 +3,7 @@ export interface ConversationMessage {
   id?: number;
   role: 'user' | 'assistant';
   content: string;
+  images?: string;
   createdAt?: string;
 }
 
@@ -26,4 +27,5 @@ export interface AddMessageRequest {
   conversationId: number;
   role: 'user' | 'assistant';
   content: string;
+  images?: string;
 }

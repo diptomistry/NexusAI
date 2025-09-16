@@ -20,6 +20,9 @@ public class Message {
     @Column(name = "content", nullable = false, columnDefinition = "TEXT")
     private String content;
 
+    @Column(name = "images", columnDefinition = "TEXT")
+    private String images; // JSON array of image URLs
+
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
@@ -33,6 +36,14 @@ public class Message {
         this.conversation = conversation;
         this.role = role;
         this.content = content;
+    }
+
+    public Message(Conversation conversation, String role, String content, String images) {
+        this();
+        this.conversation = conversation;
+        this.role = role;
+        this.content = content;
+        this.images = images;
     }
 
     // Getters and setters
@@ -66,6 +77,14 @@ public class Message {
 
     public void setContent(String content) {
         this.content = content;
+    }
+
+    public String getImages() {
+        return images;
+    }
+
+    public void setImages(String images) {
+        this.images = images;
     }
 
     public LocalDateTime getCreatedAt() {

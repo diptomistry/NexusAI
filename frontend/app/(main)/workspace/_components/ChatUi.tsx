@@ -4,7 +4,7 @@ import EmptyChatState from "./EmptyChatState";
 import { AssistantContext } from "@/context/AssistantContext";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Loader2Icon, Send } from "lucide-react";
+import { Loader2Icon, Send, Upload, Download } from "lucide-react";
 import axios from "axios";
 import AiModelOptions from "@/services/AiModelOptions";
 import Image from "next/image";
@@ -14,9 +14,13 @@ import { ASSISTANT } from "../../ai-assistants/page";
 import { updateUserTokens } from "@/services/database";
 import { ConversationService } from "@/services/ConversationService";
 import { Conversation, ConversationMessage } from "@/types/conversation";
+import { useUploadedImages } from "@/context/UploadedImagesContext";
+import { supabase } from "@/lib/supabase";
+
 type MESSAGE = {
   role: string;
   content: string;
+  images?: string[];
 };
 
 interface ChatUiProps {
@@ -33,6 +37,9 @@ function ChatUi({ deletedConversationId }: ChatUiProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [currentConversation, setCurrentConversation] =
     useState<Conversation | null>(null);
+  const { uploadedUrl, setUploadedUrl, setLatestGeneratedImages } =
+    useUploadedImages();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (chatRef.current) {
@@ -88,13 +95,73 @@ function ChatUi({ deletedConversationId }: ChatUiProps) {
 
         // Convert conversation messages to MESSAGE format
         if (conversationWithMessages.messages) {
+          console.log(
+            "Loading conversation messages:",
+            conversationWithMessages.messages
+          );
           const convertedMessages = conversationWithMessages.messages.map(
-            (msg) => ({
-              role: msg.role,
-              content: msg.content,
-            })
+            (msg) => {
+              // Extract images from content if they exist
+              let images: string[] | undefined = undefined;
+              if (msg.images) {
+                try {
+                  images = JSON.parse(msg.images);
+                  console.log(`Parsed images for ${msg.role} message:`, images);
+                } catch (e) {
+                  console.error("Error parsing images from conversation:", e);
+                }
+              }
+
+              // Fallback: extract images from content if not stored separately
+              // This applies to both user and assistant messages
+              if (!images && msg.content) {
+                const imageUrlRegex =
+                  /https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp|bmp|tiff|svg)(\?[^\s]*)?/gi;
+                const matches = msg.content.match(imageUrlRegex);
+                if (matches) {
+                  images = matches;
+                  console.log(
+                    `Extracted images from content for ${msg.role} message:`,
+                    images
+                  );
+                }
+              }
+
+              return {
+                role: msg.role,
+                content: msg.content,
+                images: images,
+              };
+            }
           );
           setMessages(convertedMessages);
+          console.log("Converted messages with images:", convertedMessages);
+
+          // Set latest generated images and uploaded image for Image editor
+          if (assistant?.name === "Image editor") {
+            // Set latest generated images from the last assistant message
+            const lastAssistantMessage = convertedMessages
+              .filter((msg) => msg.role === "assistant" && msg.images)
+              .pop();
+            if (lastAssistantMessage?.images) {
+              setLatestGeneratedImages(lastAssistantMessage.images);
+            }
+
+            // Set uploaded image from the last user message
+            const lastUserMessage = convertedMessages
+              .filter((msg) => msg.role === "user" && msg.images)
+              .pop();
+            console.log("Last user message with images:", lastUserMessage);
+            if (lastUserMessage?.images && lastUserMessage.images.length > 0) {
+              console.log(
+                "Restoring uploaded image from conversation:",
+                lastUserMessage.images[0]
+              );
+              setUploadedUrl(lastUserMessage.images[0]);
+            } else {
+              console.log("No user message with images found");
+            }
+          }
         }
       }
     } catch (error) {
@@ -122,13 +189,19 @@ function ChatUi({ deletedConversationId }: ChatUiProps) {
 
   const onSendMessage = async (inputSuggestion?: string) => {
     setLoading(true);
-    const userInput = inputSuggestion ?? input;
+    let userInput = inputSuggestion ?? input;
+
+    // For Image editor, append the uploaded image URL to the input
+    if (assistant?.name === "Image editor" && uploadedUrl) {
+      userInput = `${userInput} ${uploadedUrl}`;
+    }
 
     setMessages((prev) => [
       ...prev,
       {
         role: "user",
         content: userInput,
+        images: uploadedUrl ? [uploadedUrl] : undefined,
       },
       {
         role: "assistant",
@@ -155,6 +228,7 @@ function ChatUi({ deletedConversationId }: ChatUiProps) {
         conversationId: conversationToUse.id!,
         role: "user",
         content: userInput,
+        images: uploadedUrl ? JSON.stringify([uploadedUrl]) : undefined,
       });
     } catch (error) {
       console.error("Error saving user message:", error);
@@ -186,7 +260,25 @@ function ChatUi({ deletedConversationId }: ChatUiProps) {
 
       // Check if we got a valid response
       if (result.data) {
-        setMessages((prev) => [...prev, result.data]);
+        // Extract image URLs from the response for Image editor
+        let generatedImages: string[] = [];
+        if (assistant?.name === "Image editor" && result.data.content) {
+          const imageUrlRegex =
+            /https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp|bmp|tiff|svg)(\?[^\s]*)?/gi;
+          const matches = result.data.content.match(imageUrlRegex);
+          if (matches) {
+            generatedImages = matches;
+            setLatestGeneratedImages(generatedImages);
+          }
+        }
+
+        setMessages((prev) => [
+          ...prev,
+          {
+            ...result.data,
+            images: generatedImages.length > 0 ? generatedImages : undefined,
+          },
+        ]);
         updateUserToken(result.data?.content);
 
         // Save assistant response to conversation
@@ -196,6 +288,10 @@ function ChatUi({ deletedConversationId }: ChatUiProps) {
               conversationId: conversationToUse.id,
               role: "assistant",
               content: result.data.content,
+              images:
+                generatedImages.length > 0
+                  ? JSON.stringify(generatedImages)
+                  : undefined,
             });
           } catch (error) {
             console.error("Error saving assistant message:", error);
@@ -253,6 +349,62 @@ function ChatUi({ deletedConversationId }: ChatUiProps) {
     }
   };
 
+  const uploadFileToSupabase = async (file: File): Promise<string | null> => {
+    try {
+      const fileExt = file.name.split(".").pop();
+      const fileName = `${Date.now()}-${Math.random()
+        .toString(36)
+        .substring(2)}.${fileExt}`;
+      const filePath = `${user?.id}/inputs/${fileName}`;
+
+      console.log("[Upload] Uploading file:", {
+        bucket: "images",
+        path: filePath,
+        name: file.name,
+        type: file.type,
+        size: file.size,
+      });
+
+      const { data, error } = await supabase.storage
+        .from("images")
+        .upload(filePath, file);
+
+      if (error) {
+        console.error("[Upload] Upload failed:", error);
+        throw error;
+      }
+
+      console.log("[Upload] Upload successful:", data);
+
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from("images").getPublicUrl(data.path);
+
+      console.log("[Upload] Public URL:", publicUrl);
+      return publicUrl;
+    } catch (error) {
+      console.error("[Upload] Error details:", error);
+      return null;
+    }
+  };
+
+  const downloadImage = async (imageUrl: string, filename: string) => {
+    try {
+      const response = await fetch(imageUrl);
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error("Download failed:", error);
+    }
+  };
+
   const updateUserToken = async (resp: string | undefined) => {
     // Handle undefined or null response
     if (!resp || typeof resp !== "string") {
@@ -282,7 +434,11 @@ function ChatUi({ deletedConversationId }: ChatUiProps) {
     }
   };
   return (
-    <div className="mt-2 p-6 relative h-[88vh]">
+    <div
+      className={`mt-2 p-6 relative ${
+        assistant?.name === "Image editor" ? "h-[85vh]" : "h-[88vh]"
+      }`}
+    >
       {messages?.length == 0 && (
         <EmptyChatState
           sendMessage={(input: string) => {
@@ -291,7 +447,12 @@ function ChatUi({ deletedConversationId }: ChatUiProps) {
         />
       )}
 
-      <div ref={chatRef} className="h-[74vh] overflow-scroll scrollbar-hide">
+      <div
+        ref={chatRef}
+        className={`overflow-scroll scrollbar-hide ${
+          assistant?.name === "Image editor" ? "h-[65vh]" : "h-[74vh]"
+        }`}
+      >
         {messages.map((msg, index) => (
           <div
             key={index}
@@ -321,33 +482,162 @@ function ChatUi({ deletedConversationId }: ChatUiProps) {
                 {loading && messages?.length - 1 == index && (
                   <Loader2Icon className="animate-spin" />
                 )}
-                {/* <h2>{msg.content}</h2> */}
-                <Markdown>{msg.content}</Markdown>
+
+                {/* Display images if they exist */}
+                {msg.images && msg.images.length > 0 && (
+                  <div className="mb-2 flex flex-wrap gap-2">
+                    {msg.images.map((imageUrl, imgIndex) => (
+                      <div key={imgIndex} className="relative group">
+                        <Image
+                          src={imageUrl}
+                          alt={`${
+                            msg.role === "user" ? "Uploaded" : "Generated"
+                          } image ${imgIndex + 1}`}
+                          width={400}
+                          height={400}
+                          className="rounded-lg object-cover max-w-[400px] max-h-[400px] w-full"
+                        />
+                        <button
+                          onClick={() =>
+                            downloadImage(
+                              imageUrl,
+                              `${
+                                msg.role === "user" ? "uploaded" : "generated"
+                              }-image-${Date.now()}-${imgIndex}.jpg`
+                            )
+                          }
+                          className="absolute top-2 right-2 bg-black bg-opacity-50 text-white p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <Download size={16} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Show content only if it's not just image URLs */}
+                {(() => {
+                  // Filter out image URLs from the content
+                  const imageUrlRegex =
+                    /https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp|bmp|tiff|svg)(\?[^\s]*)?/gi;
+                  let cleanContent = msg.content;
+
+                  // Remove image URLs from assistant messages
+                  if (msg.role === "assistant") {
+                    cleanContent = msg.content
+                      .replace(imageUrlRegex, "")
+                      .trim();
+                  }
+
+                  // For Image editor, also remove image URLs from user messages
+                  if (
+                    assistant?.name === "Image editor" &&
+                    msg.role === "user"
+                  ) {
+                    cleanContent = msg.content
+                      .replace(imageUrlRegex, "")
+                      .trim();
+                  }
+
+                  // Only show content if there's something meaningful after removing URLs
+                  if (cleanContent && cleanContent.length > 0) {
+                    return <Markdown>{cleanContent}</Markdown>;
+                  }
+                  return null;
+                })()}
               </div>
             </div>
           </div>
         ))}
       </div>
 
-      <div
-        className="flex justify-between p-5 gap-5 
-            absolute bottom-5 w-[94%]"
-      >
-        <Input
-          ref={inputRef}
-          placeholder="Start Typing here..."
-          value={input}
-          disabled={loading || user?.credits <= 0}
-          onChange={(event) => setInput(event.target.value)}
-          onKeyPress={(e) => e.key == "Enter" && onSendMessage()}
-        />
-        <Button
-          disabled={loading || user?.credits <= 0}
-          onClick={() => onSendMessage()}
+      {/* Specialized UI for Image editor */}
+      {assistant?.name === "Image editor" ? (
+        <div className="absolute bottom-5 w-[94%] space-y-3">
+          {/* File upload area */}
+          <div className="flex gap-3">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={async (e) => {
+                const file = e.target.files?.[0];
+                if (file) {
+                  const url = await uploadFileToSupabase(file);
+                  if (url) {
+                    setUploadedUrl(url);
+                  }
+                }
+              }}
+              className="hidden"
+            />
+            <Button
+              onClick={() => fileInputRef.current?.click()}
+              variant="outline"
+              className="flex items-center gap-2"
+            >
+              <Upload size={16} />
+              Upload Image
+            </Button>
+            {uploadedUrl && (
+              <div className="flex items-center gap-2 text-sm text-gray-600">
+                <Image
+                  src={uploadedUrl}
+                  alt="Uploaded"
+                  width={24}
+                  height={24}
+                  className="rounded"
+                />
+                Image uploaded
+              </div>
+            )}
+          </div>
+
+          {/* Input area */}
+          <div className="flex justify-between gap-5">
+            <Input
+              ref={inputRef}
+              placeholder="Describe the edit you want to make..."
+              value={input}
+              disabled={loading || user?.credits <= 0}
+              onChange={(event) => setInput(event.target.value)}
+              onKeyPress={(e) => e.key == "Enter" && onSendMessage()}
+            />
+            <Button
+              disabled={loading || user?.credits <= 0 || !uploadedUrl}
+              onClick={() => onSendMessage()}
+            >
+              <Send />
+            </Button>
+          </div>
+
+          {!uploadedUrl && (
+            <p className="text-sm text-gray-500 text-center">
+              💡 Upload an image first, then describe the edit you want to make
+            </p>
+          )}
+        </div>
+      ) : (
+        <div
+          className="flex justify-between p-5 gap-5 
+              absolute bottom-5 w-[94%]"
         >
-          <Send />
-        </Button>
-      </div>
+          <Input
+            ref={inputRef}
+            placeholder="Start Typing here..."
+            value={input}
+            disabled={loading || user?.credits <= 0}
+            onChange={(event) => setInput(event.target.value)}
+            onKeyPress={(e) => e.key == "Enter" && onSendMessage()}
+          />
+          <Button
+            disabled={loading || user?.credits <= 0}
+            onClick={() => onSendMessage()}
+          >
+            <Send />
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

@@ -56,12 +56,14 @@ public class AiChatService {
                 System.out.println("Document context retrieved: " + (documentContext.length() > 0 ? "Yes" : "No"));
             }
 
-            // Check if it's a Gemini model
-            if (provider != null && (provider.contains("google") || provider.contains("gemini"))) {
+            // Check if it's a Gemini model - only route to Gemini for the specific Gemini
+            // model
+            if (provider != null && provider.equals("google/gemini-2.0-flash")) {
                 String fullInput = buildFullInput(userInput, assistantInstruction, documentContext);
                 return generateGeminiResponse(fullInput, request.getAiResp());
             } else {
-                // Use Replicate for all other models (OpenAI, Mistral, Anthropic, etc.)
+                // Use Replicate for all other models (OpenAI, Mistral, Anthropic, image models,
+                // etc.)
                 return generateReplicateResponse(provider, userInput, assistantInstruction, documentContext);
             }
 
@@ -143,6 +145,12 @@ public class AiChatService {
             requestBody.put("version", getModelVersion(model));
 
             Map<String, Object> inputParams = new HashMap<>();
+
+            // Try to extract any image URLs from the input text to support image models
+            List<String> imageUrls = extractImageUrls(input);
+            System.out.println("[AI] Extracted image URLs: " + imageUrls);
+
+            // Default prompt param
             inputParams.put("prompt", input);
 
             // Model-specific parameter handling
@@ -183,6 +191,22 @@ public class AiChatService {
                 inputParams.put("system_prompt", systemPrompt);
                 inputParams.put("reasoning_effort", "medium");
 
+            } else if (model.contains("black-forest-labs/flux-kontext-max")) {
+                // flux-kontext-max uses input_image and optional output_format
+                inputParams.clear();
+                inputParams.put("prompt", input);
+                if (!imageUrls.isEmpty()) {
+                    inputParams.put("input_image", imageUrls.get(0));
+                }
+                inputParams.put("output_format", "jpg");
+            } else if (model.contains("qwen/qwen-image-edit")) {
+                // qwen image edit uses image and prompt; optional output_quality
+                inputParams.clear();
+                inputParams.put("prompt", input);
+                if (!imageUrls.isEmpty()) {
+                    inputParams.put("image", imageUrls.get(0));
+                }
+                inputParams.put("output_quality", 80);
             } else {
                 // Default handling for other models
                 String systemPrompt = "You are a helpful assistant.";
@@ -202,6 +226,7 @@ public class AiChatService {
 
             System.out.println("Using model-specific parameters for: " + model);
             System.out.println("Assistant instruction being used: " + assistantInstruction);
+            System.out.println("Payload input params: " + objectMapper.writeValueAsString(inputParams));
 
             requestBody.put("input", inputParams);
 
@@ -239,9 +264,36 @@ public class AiChatService {
         modelVersions.put("anthropic/claude-4-sonnet", "anthropic/claude-4-sonnet");
         modelVersions.put("anthropic/claude-3.7-sonnet", "anthropic/claude-3.7-sonnet");
         modelVersions.put("deepseek-ai/deepseek-v3", "deepseek-ai/deepseek-v3");
+        modelVersions.put("black-forest-labs/flux-kontext-max", "black-forest-labs/flux-kontext-max");
+        modelVersions.put("qwen/qwen-image-edit", "qwen/qwen-image-edit");
 
         // Default to OpenAI o4-mini for any other non-Gemini models
         return modelVersions.getOrDefault(model, "openai/o4-mini");
+    }
+
+    private List<String> extractImageUrls(String text) {
+        // Extract image URLs from text - look for URLs that end with image extensions
+        if (text == null)
+            return List.of();
+
+        // More comprehensive URL extraction using regex
+        java.util.regex.Pattern pattern = java.util.regex.Pattern.compile(
+                "https?://[^\\s]+\\.(jpg|jpeg|png|gif|webp|bmp|tiff|svg)(\\?[^\\s]*)?",
+                java.util.regex.Pattern.CASE_INSENSITIVE);
+        java.util.regex.Matcher matcher = pattern.matcher(text);
+
+        java.util.ArrayList<String> urls = new java.util.ArrayList<>();
+        while (matcher.find()) {
+            String url = matcher.group();
+            // Clean up any trailing punctuation
+            url = url.replaceAll("[\\),.]+$", "");
+            urls.add(url);
+        }
+
+        System.out.println("[AI] Extracted " + urls.size() + " image URLs from text: " + text);
+        System.out.println("[AI] URLs found: " + urls);
+
+        return urls;
     }
 
     private AiChatResponse pollForCompletion(String predictionId) {
@@ -270,13 +322,16 @@ public class AiChatService {
                     System.out.println("Output received: " + output);
 
                     if (output != null && output.isArray() && output.size() > 0) {
-                        // Join all array elements to get complete response
+                        // If image outputs (URLs), return newline-separated list
                         StringBuilder fullResponse = new StringBuilder();
                         for (JsonNode node : output) {
-                            fullResponse.append(node.asText());
+                            String val = node.asText();
+                            if (fullResponse.length() > 0)
+                                fullResponse.append("\n");
+                            fullResponse.append(val);
                         }
                         String generatedText = fullResponse.toString();
-                        System.out.println("Generated text: " + generatedText);
+                        System.out.println("Generated output: " + generatedText);
                         return new AiChatResponse("assistant", generatedText);
                     } else if (output != null && output.isTextual()) {
                         String generatedText = output.asText();

@@ -22,6 +22,7 @@ import Profile from "./Profile";
 import { googleLogout } from "@react-oauth/google";
 import { useRouter } from "next/navigation";
 import { getAllUserAssistants } from "@/services/database";
+import AiModelOptions from "@/services/AiModelOptions";
 
 function AssistantList() {
   const { user, setUser } = useContext(AuthContext);
@@ -41,17 +42,41 @@ function AssistantList() {
       const result = await getAllUserAssistants(user.id);
       console.log(result);
       // Map Supabase format to ASSISTANT format
-      const mappedResult = result.map((item) => ({
-        id: item.assistant_id,
-        name: item.name,
-        title: item.title,
-        image: item.image,
-        instruction: item.instruction,
-        userInstruction: item.user_instruction,
-        sampleQuestions: item.sample_questions,
-        aiModelId: item.ai_model_id,
-        _id: item.id, // Keep the Supabase ID for operations
-      }));
+      const mappedResult = result.map((item) => {
+        let aiModelId = item.ai_model_id;
+
+        // Convert replicate model to display name
+        console.log(`Converting model for ${item.name}: ${aiModelId}`);
+        const modelOption = AiModelOptions.find(
+          (model) => model.replicateModel === aiModelId
+        );
+        if (modelOption) {
+          aiModelId = modelOption.name;
+          console.log(`Converted to display name: ${aiModelId}`);
+        } else {
+          console.log(`No model option found for: ${aiModelId}`);
+        }
+
+        // Set default model for Image editor if not set or if it's using an old model
+        if (
+          item.name === "Image editor" &&
+          (!aiModelId || aiModelId === "Google: Gemini 2.0 Flash")
+        ) {
+          aiModelId = "Flux Kontext Max (Text Effects)";
+        }
+
+        return {
+          id: item.assistant_id,
+          name: item.name,
+          title: item.title,
+          image: item.image,
+          instruction: item.instruction,
+          userInstruction: item.user_instruction,
+          sampleQuestions: item.sample_questions,
+          aiModelId: aiModelId,
+          _id: item.id, // Keep the Supabase ID for operations
+        };
+      });
       setAssistant(mappedResult[0]);
       setAssistantList(mappedResult);
     } catch (error) {

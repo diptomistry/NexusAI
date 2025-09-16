@@ -37,7 +37,7 @@ const DEFAULT_ASSISTANT = {
   id: 0,
   sampleQuestions: [],
   userInstruction: "",
-  aiModelId: "google/gemini-2.0-flash",
+  aiModelId: "Google: Gemini 2.0 Flash",
 };
 function AddNewAssistant({ children }: any) {
   const [selectedAssistant, setSelectedAssistant] =
@@ -46,16 +46,34 @@ function AddNewAssistant({ children }: any) {
   const [loading, setLoading] = useState(false);
   const { assistant, setAssistant } = useContext(AssistantContext);
   const onHandleInputChange = (field: string, value: string) => {
-    setSelectedAssistant((prev: any) => ({
-      ...prev,
-      [field]: value,
-    }));
+    setSelectedAssistant((prev: any) => {
+      const updated = {
+        ...prev,
+        [field]: value,
+      };
+
+      // If the name is changed to "Image editor", set the default model to Flux Kontext Max
+      if (field === "name" && value === "Image editor") {
+        updated.aiModelId = "Flux Kontext Max (Text Effects)";
+      }
+      // If the name is changed to something else and it was "Image editor", reset to default
+      else if (
+        field === "name" &&
+        prev.name === "Image editor" &&
+        value !== "Image editor"
+      ) {
+        updated.aiModelId = "Google: Gemini 2.0 Flash";
+      }
+
+      return updated;
+    });
   };
   const onSave = async () => {
     if (
       !selectedAssistant?.name ||
       !selectedAssistant.title ||
-      !selectedAssistant.userInstruction
+      (selectedAssistant?.name !== "Image editor" &&
+        !selectedAssistant.userInstruction)
     ) {
       toast("Please enter all details");
       return;
@@ -98,7 +116,17 @@ function AddNewAssistant({ children }: any) {
                       className=" p-2 hover:bg-secondary flex 
                                         gap-2 items-center rounded-xl cursor-pointer"
                       key={index}
-                      onClick={() => setSelectedAssistant(assistant)}
+                      onClick={() => {
+                        // If it's the Image editor, ensure it has the correct default model
+                        if (assistant.name === "Image editor") {
+                          setSelectedAssistant({
+                            ...assistant,
+                            aiModelId: "Flux Kontext Max (Text Effects)",
+                          });
+                        } else {
+                          setSelectedAssistant(assistant);
+                        }
+                      }}
                     >
                       <Image
                         src={assistant.image}
@@ -161,7 +189,11 @@ function AddNewAssistant({ children }: any) {
                       <SelectValue placeholder="Select Model" />
                     </SelectTrigger>
                     <SelectContent>
-                      {AiModelOptions.map((model, index) => (
+                      {AiModelOptions.filter((m) =>
+                        selectedAssistant?.name === "Image editor"
+                          ? m.imageOnly
+                          : !m.imageOnly
+                      ).map((model, index) => (
                         <SelectItem value={model.name} key={index}>
                           <div className="flex gap-2 items-center m-1">
                             <Image

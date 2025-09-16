@@ -35,19 +35,19 @@ export default [
     replicateModel: "deepseek-ai/deepseek-v3",
     logo: "/deepseek.png",
   },
-  // Image-only models (visible only for Image editor assistant)
+  // Image generation and editing models
   {
     id: 102,
     name: "Flux Kontext Max (Text Effects)",
     replicateModel: "black-forest-labs/flux-kontext-max",
     logo: "/flux.svg",
-    imageOnly: true,
+    imageOnly: true, // Keep this for now to show only in Image editor
   },
   {
     id: 103,
     name: "Qwen: Image Edit",
     replicateModel: "qwen/qwen-image-edit",
     logo: "/qwen-color.svg",
-    imageOnly: true,
+    imageOnly: true, // Keep this for now to show only in Image editor
   },
 ];

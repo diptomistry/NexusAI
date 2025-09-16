@@ -12,6 +12,7 @@ import {
 import AiModelOptions from "@/services/AiModelOptions";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import { X } from "lucide-react";
 import {
   Loader2Icon,
   Save,
@@ -33,8 +34,12 @@ function AssistantSettings() {
   const [activeTab, setActiveTab] = useState<"settings" | "documents">(
     "settings"
   );
-  const { uploadedUrl, latestGeneratedImages, setUploadedUrl } =
-    useUploadedImages();
+  const {
+    uploadedUrl,
+    latestGeneratedImages,
+    setUploadedUrl,
+    clearUploadedUrl,
+  } = useUploadedImages();
 
   const downloadImage = async (imageUrl: string, filename: string) => {
     try {
@@ -186,7 +191,20 @@ function AssistantSettings() {
                 {uploadedUrl && (
                   <BlurFade delay={0.25 * 3}>
                     <div className="mt-6">
-                      <h2 className="text-gray-500 mb-2">Reference Image:</h2>
+                      <div className="flex justify-between items-center mb-2">
+                        <h2 className="text-gray-500">Reference Image:</h2>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            console.log("Clearing uploaded URL");
+                            clearUploadedUrl();
+                          }}
+                          className="h-6 w-6 p-0 hover:bg-red-100 hover:text-red-600"
+                        >
+                          <X size={16} />
+                        </Button>
+                      </div>
                       <div className="w-full">
                         <Image
                           src={uploadedUrl}

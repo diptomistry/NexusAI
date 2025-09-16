@@ -191,7 +191,7 @@ function ChatUi({ deletedConversationId }: ChatUiProps) {
     setLoading(true);
     let userInput = inputSuggestion ?? input;
 
-    // For Image editor, append the uploaded image URL to the input
+    // For Image editor, append the uploaded image URL to the input if available
     if (assistant?.name === "Image editor" && uploadedUrl) {
       userInput = `${userInput} ${uploadedUrl}`;
     }
@@ -577,7 +577,7 @@ function ChatUi({ deletedConversationId }: ChatUiProps) {
               className="flex items-center gap-2"
             >
               <Upload size={16} />
-              Upload Image
+              Upload Image (Optional)
             </Button>
             {uploadedUrl && (
               <div className="flex items-center gap-2 text-sm text-gray-600">
@@ -597,14 +597,14 @@ function ChatUi({ deletedConversationId }: ChatUiProps) {
           <div className="flex justify-between gap-5">
             <Input
               ref={inputRef}
-              placeholder="Describe the edit you want to make..."
+              placeholder="Describe the image you want to generate or edit..."
               value={input}
               disabled={loading || user?.credits <= 0}
               onChange={(event) => setInput(event.target.value)}
               onKeyPress={(e) => e.key == "Enter" && onSendMessage()}
             />
             <Button
-              disabled={loading || user?.credits <= 0 || !uploadedUrl}
+              disabled={loading || user?.credits <= 0}
               onClick={() => onSendMessage()}
             >
               <Send />
@@ -613,7 +613,7 @@ function ChatUi({ deletedConversationId }: ChatUiProps) {
 
           {!uploadedUrl && (
             <p className="text-sm text-gray-500 text-center">
-              💡 Upload an image first, then describe the edit you want to make
+              💡 Generate new images from text or upload an image to edit it
             </p>
           )}
         </div>

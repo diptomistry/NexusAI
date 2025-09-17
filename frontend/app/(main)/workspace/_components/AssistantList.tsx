@@ -19,7 +19,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { LogOut, UserCircle2 } from "lucide-react";
 import Profile from "./Profile";
-import { googleLogout } from "@react-oauth/google";
+import { LogoutDialog } from "./LogoutDialog";
+import { performLogout } from "@/services/logoutService";
 import { useRouter } from "next/navigation";
 import { getAllUserAssistants } from "@/services/database";
 import AiModelOptions from "@/services/AiModelOptions";
@@ -30,10 +31,38 @@ function AssistantList() {
   const { assistant, setAssistant } = useContext(AssistantContext);
   const [loading, setLoading] = useState(false);
   const [openProfile, setOpenProfile] = useState(false);
+  const [showLogoutDialog, setShowLogoutDialog] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const router = useRouter();
   useEffect(() => {
     user && GetUserAssistants();
   }, [user && assistant == null]);
+
+  // Enhanced logout handler
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+    try {
+      await performLogout({
+        showConfirmation: false, // We're using our own dialog
+        showLoading: true,
+        redirectTo: "/sign-in",
+        onSuccess: () => {
+          // Clear local state
+          setAssistant(null);
+          setUser(null);
+          setAssistantList([]);
+          setShowLogoutDialog(false);
+        },
+        onError: (error) => {
+          console.error("Logout failed:", error);
+          setIsLoggingOut(false);
+        },
+      });
+    } catch (error) {
+      console.error("Logout error:", error);
+      setIsLoggingOut(false);
+    }
+  };
 
   const GetUserAssistants = async () => {
     setLoading(true);
@@ -173,18 +202,20 @@ function AssistantList() {
             <UserCircle2 /> Profile
           </DropdownMenuItem>
           <DropdownMenuItem
-            onClick={() => {
-              setAssistant(null);
-              setUser(null);
-              googleLogout();
-              router.replace("/");
-            }}
+            onClick={() => setShowLogoutDialog(true)}
+            disabled={isLoggingOut}
           >
-            <LogOut /> Logout
+            <LogOut /> {isLoggingOut ? "Logging out..." : "Logout"}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
       <Profile openDialog={openProfile} setOpenDialog={setOpenProfile} />
+      <LogoutDialog
+        open={showLogoutDialog}
+        onOpenChange={setShowLogoutDialog}
+        onConfirm={handleLogout}
+        isLoading={isLoggingOut}
+      />
     </div>
   );
 }

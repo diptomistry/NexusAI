@@ -1,5 +1,5 @@
 "use client";
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext, useState, useEffect } from "react";
 
 interface UploadedImagesContextType {
   uploadedUrl: string | null;
@@ -26,6 +26,18 @@ export const UploadedImagesProvider = ({
   const clearUploadedUrl = () => {
     setUploadedUrl(null);
   };
+
+  // Listen for logout cleanup event
+  useEffect(() => {
+    const handleLogoutCleanup = () => {
+      setUploadedUrl(null);
+      setLatestGeneratedImages([]);
+    };
+
+    window.addEventListener("logout-cleanup", handleLogoutCleanup);
+    return () =>
+      window.removeEventListener("logout-cleanup", handleLogoutCleanup);
+  }, []);
 
   return (
     <UploadedImagesContext.Provider

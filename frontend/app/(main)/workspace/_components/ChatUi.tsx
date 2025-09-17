@@ -16,6 +16,7 @@ import { ConversationService } from "@/services/ConversationService";
 import { Conversation, ConversationMessage } from "@/types/conversation";
 import { useUploadedImages } from "@/context/UploadedImagesContext";
 import { supabase } from "@/lib/supabase";
+import { calculateTokenCost } from "@/lib/tokenCosts";
 
 type MESSAGE = {
   role: string;
@@ -72,6 +73,20 @@ function ChatUi({ deletedConversationId }: ChatUiProps) {
       }, 100);
     }
   }, [deletedConversationId, currentConversation?.id]);
+
+  // Listen for logout cleanup event
+  useEffect(() => {
+    const handleLogoutCleanup = () => {
+      // Clear all chat-related state on logout
+      setMessages([]);
+      setCurrentConversation(null);
+      setLoading(false);
+    };
+
+    window.addEventListener("logout-cleanup", handleLogoutCleanup);
+    return () =>
+      window.removeEventListener("logout-cleanup", handleLogoutCleanup);
+  }, []);
 
   const loadOrCreateConversation = async () => {
     if (!assistant || !user) return;
@@ -412,8 +427,15 @@ function ChatUi({ deletedConversationId }: ChatUiProps) {
       return;
     }
 
-    const tokenCount = resp.trim() ? resp.trim().split(/\s+/).length : 0;
-    console.log(tokenCount);
+    // Use the sophisticated token costing system
+    const tokenCount = calculateTokenCost(assistant?.name || "default", resp);
+    const isImageGeneration = assistant?.name === "Image editor";
+
+    console.log(
+      `${
+        isImageGeneration ? "Image generation" : "Text response"
+      } - charging ${tokenCount} tokens`
+    );
 
     // Only update if user exists and has credits
     if (!user?.id || !user?.credits) {

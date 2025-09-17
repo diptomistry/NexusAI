@@ -72,7 +72,7 @@ public class SSLCommerzService {
             payment.setCurrency(request.getCurrency());
             payment.setStatus("pending");
             payment.setPlanType("pro_plan");
-            payment.setCreditsAdded(500000);
+            payment.setCreditsAdded(30000);
 
             paymentRepository.save(payment);
 

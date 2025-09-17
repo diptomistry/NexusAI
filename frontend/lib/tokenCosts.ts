@@ -52,8 +52,10 @@ export function calculateTokenCost(
     return config.baseCost; // Fallback to base cost
   } else {
     // For text assistants, use word-based counting with base cost
+    // 1 token = 4 words, so divide word count by 4
     const wordCount = response.trim() ? response.trim().split(/\s+/).length : 0;
-    return Math.max(config.baseCost, wordCount * config.successMultiplier);
+    const tokenCount = Math.ceil(wordCount / 4); // Round up to ensure minimum 1 token
+    return Math.max(config.baseCost, tokenCount * config.successMultiplier);
   }
 }
 
@@ -65,6 +67,6 @@ export function getTokenCostInfo(assistantName: string): string {
   } else if (assistantName === 'Video generator') {
     return `Video generation: 1500 tokens per second (based on $0.15/second)`;
   } else {
-    return `Text generation: ~1 token per word (minimum ${config.baseCost} tokens)`;
+    return `Text generation: ~1 token per 4 words (minimum ${config.baseCost} tokens)`;
   }
 }

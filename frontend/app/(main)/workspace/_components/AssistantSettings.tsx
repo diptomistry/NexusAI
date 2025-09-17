@@ -168,7 +168,8 @@ function AssistantSettings() {
                       } else if (assistant?.name === "Video generator") {
                         return model.name === "Seedance-1-Pro";
                       } else {
-                        return !model.imageOnly;
+                        // For text assistants, exclude image-only and video-only models
+                        return !model.imageOnly && !model.videoOnly;
                       }
                     }).map((model, index) => (
                       <SelectItem key={index} value={model.name}>

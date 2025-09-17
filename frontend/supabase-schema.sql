@@ -4,10 +4,14 @@ CREATE TABLE users (
     name TEXT NOT NULL,
     email TEXT UNIQUE NOT NULL,
     picture TEXT NOT NULL,
-    credits INTEGER DEFAULT 5000,
+    credits INTEGER DEFAULT 2500,
     order_id TEXT,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    created_at TIMESTAMP
+    WITH
+        TIME ZONE DEFAULT NOW(),
+        updated_at TIMESTAMP
+    WITH
+        TIME ZONE DEFAULT NOW()
 );
 
 -- User AI Assistants table
@@ -22,8 +26,12 @@ CREATE TABLE user_ai_assistants (
     sample_questions JSONB,
     ai_model_id TEXT DEFAULT 'Google: Gemini 2.0 Flash',
     user_id UUID REFERENCES users (id) ON DELETE CASCADE,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    created_at TIMESTAMP
+    WITH
+        TIME ZONE DEFAULT NOW(),
+        updated_at TIMESTAMP
+    WITH
+        TIME ZONE DEFAULT NOW()
 );
 
 -- Documents table
@@ -37,8 +45,12 @@ CREATE TABLE documents (
     user_id UUID NOT NULL REFERENCES users (id) ON DELETE CASCADE,
     assistant_id TEXT,
     file_path TEXT,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    created_at TIMESTAMP
+    WITH
+        TIME ZONE DEFAULT NOW(),
+        updated_at TIMESTAMP
+    WITH
+        TIME ZONE DEFAULT NOW()
 );
 
 -- Create indexes for better performance

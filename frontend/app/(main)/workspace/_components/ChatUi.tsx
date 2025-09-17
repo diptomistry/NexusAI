@@ -211,6 +211,18 @@ function ChatUi({ deletedConversationId }: ChatUiProps) {
       return;
     }
 
+    // Check if Qwen Image Edit model requires an image
+    if (
+      assistant?.name === "Image editor" &&
+      assistant?.aiModelId === "Qwen: Image Edit" &&
+      !uploadedUrl
+    ) {
+      toast.error(
+        "Image upload is required for Qwen Image Edit model. Please upload an image first."
+      );
+      return;
+    }
+
     setLoading(true);
     let userInput = inputSuggestion ?? input;
 
@@ -609,10 +621,17 @@ function ChatUi({ deletedConversationId }: ChatUiProps) {
             <Button
               onClick={() => fileInputRef.current?.click()}
               variant="outline"
-              className="flex items-center gap-2"
+              className={`flex items-center gap-2 ${
+                assistant?.aiModelId === "Qwen: Image Edit" && !uploadedUrl
+                  ? "border-red-500 text-red-600"
+                  : ""
+              }`}
             >
               <Upload size={16} />
-              Upload Image (Optional)
+              Upload Image{" "}
+              {assistant?.aiModelId === "Qwen: Image Edit"
+                ? "(Required)"
+                : "(Optional)"}
             </Button>
             {uploadedUrl && (
               <div className="flex items-center gap-2 text-sm text-secondary">
@@ -638,14 +657,30 @@ function ChatUi({ deletedConversationId }: ChatUiProps) {
               onChange={(event) => setInput(event.target.value)}
               onKeyPress={(e) => e.key == "Enter" && onSendMessage()}
             />
-            <Button disabled={loading} onClick={() => onSendMessage()}>
+            <Button
+              disabled={
+                loading ||
+                (assistant?.name === "Image editor" &&
+                  assistant?.aiModelId === "Qwen: Image Edit" &&
+                  !uploadedUrl)
+              }
+              onClick={() => onSendMessage()}
+            >
               <Send />
             </Button>
           </div>
 
           {!uploadedUrl && (
-            <p className="text-sm text-muted text-center">
-              💡 Generate new images from text or upload an image to edit it
+            <p
+              className={`text-sm text-center ${
+                assistant?.aiModelId === "Qwen: Image Edit"
+                  ? "text-red-600 font-medium"
+                  : "text-muted"
+              }`}
+            >
+              {assistant?.aiModelId === "Qwen: Image Edit"
+                ? "⚠️ Image upload is required for Qwen Image Edit model"
+                : "💡 Generate new images from text or upload an image to edit it"}
             </p>
           )}
 

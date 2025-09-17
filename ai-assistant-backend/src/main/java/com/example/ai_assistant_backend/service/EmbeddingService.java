@@ -108,12 +108,11 @@ public class EmbeddingService {
 
         // Split into batches and process in parallel
         List<List<String>> batches = createBatches(texts, MAX_BATCH_SIZE);
-        
+
         List<CompletableFuture<Map<String, float[]>>> futures = batches.stream()
                 .map(batch -> CompletableFuture.supplyAsync(
-                    () -> generateEmbeddingsForBatch(batch), 
-                    embeddingExecutor
-                ))
+                        () -> generateEmbeddingsForBatch(batch),
+                        embeddingExecutor))
                 .collect(Collectors.toList());
 
         // Combine results when all complete
@@ -197,13 +196,13 @@ public class EmbeddingService {
         if (vectorString == null || vectorString.trim().isEmpty()) {
             return new float[0];
         }
-        
+
         // Remove brackets and split by commas
         String clean = vectorString.replaceAll("[\\[\\]\\s]", "");
         if (clean.isEmpty()) {
             return new float[0];
         }
-        
+
         String[] parts = clean.split(",");
         float[] result = new float[parts.length];
         for (int i = 0; i < parts.length; i++) {
@@ -216,9 +215,9 @@ public class EmbeddingService {
      * Calculate cosine similarity between two embeddings
      */
     public double calculateCosineSimilarity(float[] embedding1, float[] embedding2) {
-        if (embedding1 == null || embedding2 == null || 
-            embedding1.length != embedding2.length || 
-            embedding1.length == 0) {
+        if (embedding1 == null || embedding2 == null ||
+                embedding1.length != embedding2.length ||
+                embedding1.length == 0) {
             return 0.0;
         }
 
@@ -247,8 +246,9 @@ public class EmbeddingService {
     public int estimateTokenCount(String text) {
         if (text == null)
             return 0;
-        // Rough estimate: 1 token ≈ 4 characters
-        return text.length() / 4;
+        // Rough estimate: 1 token ≈ 4 words
+        String[] words = text.trim().split("\\s+");
+        return (int) Math.ceil(words.length / 4.0);
     }
 
     /**
@@ -263,13 +263,21 @@ public class EmbeddingService {
             return text;
         }
 
-        // Truncate to approximately maxTokens worth of characters
-        int maxChars = maxTokens * 4;
-        if (text.length() <= maxChars) {
+        // Truncate to approximately maxTokens worth of words (4 words per token)
+        String[] words = text.trim().split("\\s+");
+        int maxWords = maxTokens * 4;
+        if (words.length <= maxWords) {
             return text;
         }
 
-        return text.substring(0, maxChars);
+        // Join first maxWords words
+        StringBuilder truncated = new StringBuilder();
+        for (int i = 0; i < maxWords && i < words.length; i++) {
+            if (i > 0)
+                truncated.append(" ");
+            truncated.append(words[i]);
+        }
+        return truncated.toString();
     }
 
     /**

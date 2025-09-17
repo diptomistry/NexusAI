@@ -23,9 +23,9 @@ function Profile({ openDialog, setOpenDialog }: any) {
 
   useEffect(() => {
     if (user?.order_id) {
-      setMaxToken(500000);
+      setMaxToken(30000);
     } else {
-      setMaxToken(5000);
+      setMaxToken(2500);
     }
   }, [user]);
 
@@ -37,7 +37,7 @@ function Profile({ openDialog, setOpenDialog }: any) {
 
       const paymentRequest = {
         userId: user?.id,
-        totalAmount: 800.0, // 800 BDT (approximately $10)
+        totalAmount: 2000.0, // 2000 BDT for Pro Plan
         currency: "BDT",
         customerName: user?.name || "",
         customerEmail: user?.email || "",
@@ -156,9 +156,9 @@ function Profile({ openDialog, setOpenDialog }: any) {
                   <div className="flex justify-between">
                     <div>
                       <h2 className="font-bold text-lg"> Pro Plan</h2>
-                      <h2>500,000 Tokens</h2>
+                      <h2>30,000 Tokens</h2>
                     </div>
-                    <h2 className="font-bold text-lg">৳800/month</h2>
+                    <h2 className="font-bold text-lg">৳2,000/month</h2>
                   </div>
                   <hr className="my-3" />
                   <Button
@@ -172,7 +172,7 @@ function Profile({ openDialog, setOpenDialog }: any) {
                     ) : (
                       <WalletCardsIcon />
                     )}{" "}
-                    Upgrade (৳800)
+                    Upgrade (৳2,000)
                   </Button>
                 </div>
               ) : (

@@ -18,11 +18,11 @@ public class User {
 
     private String picture;
 
-    @Column(name = "credits", columnDefinition = "INTEGER DEFAULT 5000")
-    private Integer credits = 5000;
+    @Column(name = "credits", columnDefinition = "INTEGER DEFAULT 2500")
+    private Integer credits = 2500;
 
-    @Column(name = "max_credits", columnDefinition = "INTEGER DEFAULT 5000")
-    private Integer maxCredits = 5000;
+    @Column(name = "max_credits", columnDefinition = "INTEGER DEFAULT 2500")
+    private Integer maxCredits = 2500;
 
     @Column(name = "order_id")
     private String orderId;

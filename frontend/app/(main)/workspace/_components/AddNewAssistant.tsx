@@ -197,7 +197,8 @@ function AddNewAssistant({ children }: any) {
                         ) {
                           return m.name === "Seedance-1-Pro";
                         } else {
-                          return !m.imageOnly;
+                          // For text assistants, exclude image-only and video-only models
+                          return !m.imageOnly && !m.videoOnly;
                         }
                       }).map((model, index) => (
                         <SelectItem value={model.name} key={index}>

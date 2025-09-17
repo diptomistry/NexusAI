@@ -474,8 +474,8 @@ function ChatUi({ deletedConversationId }: ChatUiProps) {
                 className={`p-3 rounded-lg gap-2
                                 ${
                                   msg.role == "user"
-                                    ? "bg-gray-200 text-black rounded-lg"
-                                    : "bg-gray-50 text-black"
+                                    ? "user-message rounded-lg"
+                                    : "assistant-message"
                                 }
                                 `}
               >
@@ -580,7 +580,7 @@ function ChatUi({ deletedConversationId }: ChatUiProps) {
               Upload Image (Optional)
             </Button>
             {uploadedUrl && (
-              <div className="flex items-center gap-2 text-sm text-gray-600">
+              <div className="flex items-center gap-2 text-sm text-secondary">
                 <Image
                   src={uploadedUrl}
                   alt="Uploaded"
@@ -612,7 +612,7 @@ function ChatUi({ deletedConversationId }: ChatUiProps) {
           </div>
 
           {!uploadedUrl && (
-            <p className="text-sm text-gray-500 text-center">
+            <p className="text-sm text-muted text-center">
               💡 Generate new images from text or upload an image to edit it
             </p>
           )}

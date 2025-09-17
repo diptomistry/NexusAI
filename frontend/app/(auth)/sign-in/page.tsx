@@ -46,7 +46,7 @@ function SignIn() {
         className="flex flex-col items-center
         gap-5 border rounded-2xl p-10 shadow-md"
       >
-        <Image src={"/logo.svg"} alt="logo" width={50} height={50} />
+        <Image src={"/NesusAI.png"} alt="Nexus AI" width={50} height={50} />
         <h2 className="text-2xl">Sign In To AI Personal Assitant & Agent</h2>
 
         <Button onClick={() => googleLogin()}>Sign in With Gmail</Button>

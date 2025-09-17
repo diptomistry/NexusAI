@@ -42,7 +42,7 @@ function Workspace() {
           </div>
           <div className="col-span-1 md:col-span-4 lg:col-span-3 flex flex-col">
             {/* Conversation History at top */}
-            <div className="border-b bg-white">
+            <div className="border-b bg-card">
               <ConversationList
                 onSelectConversation={handleSelectConversation}
                 onDeleteConversation={handleDeleteConversation}

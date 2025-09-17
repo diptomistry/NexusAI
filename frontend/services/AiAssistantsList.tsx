@@ -149,9 +149,11 @@ export default [
     sampleQuestions: [
       "Generate a futuristic cityscape at sunset",
       "Create a cute cartoon cat wearing a hat",
-      "Edit this image to add a rainbow in the sky: <url>",
-      "Change the background to a beach scene: <url>",
-      "Blend these two images in a natural scene: <url1> <url2>",
+      "Create a pretty girl with long hair",
+      "Generate a dog with a mustache",
+      "Generate a cat with a hat",
+      "Generate a bird with a hat",
+     
     ],
     aiModelId: "Flux Kontext Max (Text Effects)",
   },

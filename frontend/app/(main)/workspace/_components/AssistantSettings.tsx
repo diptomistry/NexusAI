@@ -96,16 +96,16 @@ function AssistantSettings() {
 
   return (
     assistant && (
-      <div className="h-screen bg-gray-50 border-l p-5 relative overflow-y-auto">
+      <div className="h-screen bg-soft border-l p-5 relative overflow-y-auto">
         {/* Tab Navigation - Hide for Image editor */}
         {assistant?.name !== "Image editor" && (
-          <div className="flex space-x-1 mb-6 bg-gray-100 p-1 rounded-lg">
+          <div className="flex space-x-1 mb-6 bg-soft p-1 rounded-lg">
             <button
               onClick={() => setActiveTab("settings")}
               className={`flex items-center px-3 py-2 rounded-md text-xs font-medium transition-colors ${
                 activeTab === "settings"
-                  ? "bg-white shadow-sm text-gray-900"
-                  : "text-gray-500 hover:text-gray-700"
+                  ? "bg-card shadow-sm text-strong"
+                  : "text-muted hover:text-secondary"
               }`}
             >
               <Settings className="h-4 w-4 mr-2" />
@@ -115,8 +115,8 @@ function AssistantSettings() {
               onClick={() => setActiveTab("documents")}
               className={`flex items-center px-3 py-2 rounded-md text-xs font-medium transition-colors ${
                 activeTab === "documents"
-                  ? "bg-white shadow-sm text-gray-900"
-                  : "text-gray-500 hover:text-gray-700"
+                  ? "bg-card shadow-sm text-strong"
+                  : "text-muted hover:text-secondary"
               }`}
             >
               <FileText className="h-4 w-4 mr-2" />
@@ -145,7 +145,7 @@ function AssistantSettings() {
             </BlurFade>
             <BlurFade delay={0.25 * 2}>
               <div className="mt-8">
-                <h2 className="text-gray-500">AI Modal:</h2>
+                <h2 className="text-muted">AI Modal:</h2>
                 <Select
                   value={
                     assistant?.aiModelId ||
@@ -192,7 +192,7 @@ function AssistantSettings() {
                   <BlurFade delay={0.25 * 3}>
                     <div className="mt-6">
                       <div className="flex justify-between items-center mb-2">
-                        <h2 className="text-gray-500">Reference Image:</h2>
+                        <h2 className="text-muted">Reference Image:</h2>
                         <Button
                           variant="ghost"
                           size="sm"
@@ -222,7 +222,7 @@ function AssistantSettings() {
                 {latestGeneratedImages.length > 0 && (
                   <BlurFade delay={0.25 * 4}>
                     <div className="mt-6">
-                      <h2 className="text-gray-500 mb-2">
+                      <h2 className="text-muted mb-2">
                         Latest Generated Images (click to use as reference):
                       </h2>
                       <div className="space-y-3">
@@ -258,7 +258,7 @@ function AssistantSettings() {
               /* Regular instruction editor for other assistants */
               <BlurFade delay={0.25 * 3}>
                 <div className="mt-4">
-                  <h2 className="text-gray-500">Instruction:</h2>
+                  <h2 className="text-muted">Instruction:</h2>
                   <Textarea
                     placeholder="Add Instruction"
                     className="h-[180px] bg-white"

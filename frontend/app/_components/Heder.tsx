@@ -1,22 +1,19 @@
-import { Button } from '@/components/ui/button'
-import Image from 'next/image'
-import Link from 'next/link'
-import React from 'react'
+import { Button } from "@/components/ui/button";
+import Image from "next/image";
+import Link from "next/link";
+import React from "react";
 
 function Heder() {
-    return (
-        <div className='p-4 shadow-md flex justify-between items-center'>
-            <div className='flex gap-2 items-center'>
-                <Image src={'/logo.svg'} alt='log' width={40} height={40}
-
-                />
-                <h2 className='font-bold text-lg'>AI Genius</h2>
-            </div>
-            <Link href={'/ai-assistants'}>
-                <Button >Get Started</Button>
-            </Link>
-        </div>
-    )
+  return (
+    <div className="pl-2 pr-2 shadow-md flex justify-between items-center">
+      <div className="flex gap-2 items-center">
+        <Image src={"/NesusAI.png"} alt="Nexus AI" width={80} height={80} />
+      </div>
+      <Link href={"/ai-assistants"}>
+        <Button>Get Started</Button>
+      </Link>
+    </div>
+  );
 }
 
-export default Heder
+export default Heder;

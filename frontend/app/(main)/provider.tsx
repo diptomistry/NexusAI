@@ -2,7 +2,7 @@
 import React, { useContext, useEffect, useState } from "react";
 import Header from "./_components/Header";
 import { GetAuthUserData } from "@/services/GlobalApi";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { AuthContext } from "@/context/AuthContext";
 import { AssistantContext } from "@/context/AssistantContext";
 import { getUser } from "@/services/database";
@@ -13,6 +13,7 @@ function Provider({
   children: React.ReactNode;
 }>) {
   const router = useRouter();
+  const pathname = usePathname();
   const { user, setUser } = useContext(AuthContext);
   const [assistant, setAssistant] = useState();
   useEffect(() => {
@@ -38,7 +39,7 @@ function Provider({
   return (
     <div>
       <AssistantContext.Provider value={{ assistant, setAssistant }}>
-        <Header />
+        {pathname !== "/workspace" && <Header />}
         {children}
       </AssistantContext.Provider>
     </div>

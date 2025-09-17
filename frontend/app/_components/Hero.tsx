@@ -51,7 +51,7 @@ function Hero() {
                     <h1 className="text-4xl font-bold tracking-tighter md:text-5xl lg:text-7xl">
                         Yours Personal <AuroraText>AI Assistance</AuroraText>
                     </h1>
-                    <Link href={'//ai-assistants'}>
+                    <Link href={'/ai-assistants'}>
                         <Button >Get Started</Button>
                     </Link>
                     <div className='max-w-2xl'>

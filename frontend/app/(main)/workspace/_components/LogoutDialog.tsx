@@ -40,6 +40,15 @@ export function LogoutDialog({
               <li>Reset your current conversation</li>
               <li>Clear any uploaded files</li>
             </ul>
+            <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-md">
+              <p className="text-sm font-medium text-blue-800 mb-1">
+                💾 Your conversation history will be saved
+              </p>
+              <p className="text-xs text-blue-700">
+                All your previous conversations and messages are stored securely
+                in the database. You can access them again when you log back in.
+              </p>
+            </div>
             <p className="mt-3 text-sm font-medium text-gray-700">
               You'll need to sign in again to access your account.
             </p>

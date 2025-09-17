@@ -50,4 +50,12 @@ export default [
     logo: "/qwen-color.svg",
     imageOnly: true, // Keep this for now to show only in Image editor
   },
+  // Video generation models
+  {
+    id: 201,
+    name: "Seedance-1-Pro",
+    replicateModel: "bytedance/seedance-1-pro",
+    logo: "/video-generate.jpg",
+    videoOnly: true, // Show only in Video generator
+  },
 ];

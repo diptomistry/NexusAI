@@ -97,33 +97,34 @@ function AssistantSettings() {
   return (
     assistant && (
       <div className="h-screen bg-soft border-l p-5 relative overflow-y-auto">
-        {/* Tab Navigation - Hide for Image editor */}
-        {assistant?.name !== "Image editor" && (
-          <div className="flex space-x-1 mb-6 bg-soft p-1 rounded-lg">
-            <button
-              onClick={() => setActiveTab("settings")}
-              className={`flex items-center px-3 py-2 rounded-md text-xs font-medium transition-colors ${
-                activeTab === "settings"
-                  ? "bg-card shadow-sm text-strong"
-                  : "text-muted hover:text-secondary"
-              }`}
-            >
-              <Settings className="h-4 w-4 mr-2" />
-              Settings
-            </button>
-            <button
-              onClick={() => setActiveTab("documents")}
-              className={`flex items-center px-3 py-2 rounded-md text-xs font-medium transition-colors ${
-                activeTab === "documents"
-                  ? "bg-card shadow-sm text-strong"
-                  : "text-muted hover:text-secondary"
-              }`}
-            >
-              <FileText className="h-4 w-4 mr-2" />
-              Documents
-            </button>
-          </div>
-        )}
+        {/* Tab Navigation - Hide for Image editor and Video generator */}
+        {assistant?.name !== "Image editor" &&
+          assistant?.name !== "Video generator" && (
+            <div className="flex space-x-1 mb-6 bg-soft p-1 rounded-lg">
+              <button
+                onClick={() => setActiveTab("settings")}
+                className={`flex items-center px-3 py-2 rounded-md text-xs font-medium transition-colors ${
+                  activeTab === "settings"
+                    ? "bg-card shadow-sm text-strong"
+                    : "text-muted hover:text-secondary"
+                }`}
+              >
+                <Settings className="h-4 w-4 mr-2" />
+                Settings
+              </button>
+              <button
+                onClick={() => setActiveTab("documents")}
+                className={`flex items-center px-3 py-2 rounded-md text-xs font-medium transition-colors ${
+                  activeTab === "documents"
+                    ? "bg-card shadow-sm text-strong"
+                    : "text-muted hover:text-secondary"
+                }`}
+              >
+                <FileText className="h-4 w-4 mr-2" />
+                Documents
+              </button>
+            </div>
+          )}
 
         {/* Tab Content */}
         {activeTab === "settings" && (
@@ -161,11 +162,15 @@ function AssistantSettings() {
                     <SelectValue placeholder="Select AI Model" />
                   </SelectTrigger>
                   <SelectContent>
-                    {AiModelOptions.filter((model) =>
-                      assistant?.name === "Image editor"
-                        ? model.imageOnly
-                        : !model.imageOnly
-                    ).map((model, index) => (
+                    {AiModelOptions.filter((model) => {
+                      if (assistant?.name === "Image editor") {
+                        return model.imageOnly;
+                      } else if (assistant?.name === "Video generator") {
+                        return model.name === "Seedance-1-Pro";
+                      } else {
+                        return !model.imageOnly;
+                      }
+                    }).map((model, index) => (
                       <SelectItem key={index} value={model.name}>
                         <div className="flex gap-2 items-center">
                           <Image
@@ -285,11 +290,13 @@ function AssistantSettings() {
           </div>
         )}
 
-        {activeTab === "documents" && assistant?.name !== "Image editor" && (
-          <div className="pb-20">
-            <DocumentManager />
-          </div>
-        )}
+        {activeTab === "documents" &&
+          assistant?.name !== "Image editor" &&
+          assistant?.name !== "Video generator" && (
+            <div className="pb-20">
+              <DocumentManager />
+            </div>
+          )}
       </div>
     )
   );

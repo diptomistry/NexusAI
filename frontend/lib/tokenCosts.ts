@@ -22,6 +22,9 @@ export const TOKEN_COSTS = {
   // Image generation assistants - much higher costs
   'Image editor': { baseCost: 1000, successMultiplier: 1, failureCost: 100 },
   
+  // Video generation assistants - highest costs ($0.15 per second)
+  'Video generator': { baseCost: 10000, successMultiplier: 1, failureCost: 1000 },
+  
   // Default fallback
   'default': { baseCost: 1, successMultiplier: 1, failureCost: 1 }
 } as const;
@@ -29,7 +32,8 @@ export const TOKEN_COSTS = {
 export function calculateTokenCost(
   assistantName: string, 
   response: string, 
-  isImageGeneration: boolean = false
+  isImageGeneration: boolean = false,
+  videoDuration?: number
 ): number {
   const config = TOKEN_COSTS[assistantName as keyof typeof TOKEN_COSTS] || TOKEN_COSTS.default;
   
@@ -39,6 +43,13 @@ export function calculateTokenCost(
     const hasImages = imageUrlRegex.test(response);
     
     return hasImages ? config.baseCost : config.failureCost;
+  } else if (assistantName === 'Video generator') {
+    // For video generation, calculate based on duration ($0.15 per second)
+    // Assuming 1 token = $0.0001, so $0.15 = 1500 tokens per second
+    if (videoDuration && videoDuration > 0) {
+      return Math.round(videoDuration * 1500); // 1500 tokens per second
+    }
+    return config.baseCost; // Fallback to base cost
   } else {
     // For text assistants, use word-based counting with base cost
     const wordCount = response.trim() ? response.trim().split(/\s+/).length : 0;
@@ -51,6 +62,8 @@ export function getTokenCostInfo(assistantName: string): string {
   
   if (assistantName === 'Image editor') {
     return `Image generation: ${config.baseCost} tokens (success) / ${config.failureCost} tokens (attempt)`;
+  } else if (assistantName === 'Video generator') {
+    return `Video generation: 1500 tokens per second (based on $0.15/second)`;
   } else {
     return `Text generation: ~1 token per word (minimum ${config.baseCost} tokens)`;
   }

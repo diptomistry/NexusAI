@@ -189,11 +189,17 @@ function AddNewAssistant({ children }: any) {
                       <SelectValue placeholder="Select Model" />
                     </SelectTrigger>
                     <SelectContent>
-                      {AiModelOptions.filter((m) =>
-                        selectedAssistant?.name === "Image editor"
-                          ? m.imageOnly
-                          : !m.imageOnly
-                      ).map((model, index) => (
+                      {AiModelOptions.filter((m) => {
+                        if (selectedAssistant?.name === "Image editor") {
+                          return m.imageOnly;
+                        } else if (
+                          selectedAssistant?.name === "Video generator"
+                        ) {
+                          return m.name === "Seedance-1-Pro";
+                        } else {
+                          return !m.imageOnly;
+                        }
+                      }).map((model, index) => (
                         <SelectItem value={model.name} key={index}>
                           <div className="flex gap-2 items-center m-1">
                             <Image

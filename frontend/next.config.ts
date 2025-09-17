@@ -5,6 +5,11 @@ const nextConfig: NextConfig = {
   images: {
     domains: ['lh3.googleusercontent.com', 'cxpmhxjnnryfrizictgm.supabase.co', 'replicate.delivery']
   },
+  experimental: {
+    serverActions: {
+      bodySizeLimit: '10mb'
+    }
+  },
   async headers() {
     return [
       {

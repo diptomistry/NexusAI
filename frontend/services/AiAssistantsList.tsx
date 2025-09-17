@@ -153,8 +153,17 @@ export default [
       "Generate a dog with a mustache",
       "Generate a cat with a hat",
       "Generate a bird with a hat",
-     
     ],
     aiModelId: "Flux Kontext Max (Text Effects)",
+  },
+  {
+    id: 12,
+    name: "Video generator",
+    title: "Video Generation 🎬",
+    image: "/video-generate.jpg",
+    instruction: `You are a video generation assistant. You can create videos from text prompts or images using advanced AI models. You support both text-to-video and image-to-video generation with various durations, resolutions, and aspect ratios. Always provide high-quality, creative, and engaging video content.`,
+    userInstruction: `You can either: 1) Generate videos from text descriptions, or 2) Create videos from images. Specify duration (3-12 seconds), resolution (720p, 1080p), and aspect ratio (16:9, 9:16, 1:1, etc.) as needed. The assistant will return generated video URLs.`,
+    sampleQuestions: [],
+    aiModelId: "Seedance-1-Pro",
   },
 ];

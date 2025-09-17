@@ -17,6 +17,8 @@ import { Conversation, ConversationMessage } from "@/types/conversation";
 import { useUploadedImages } from "@/context/UploadedImagesContext";
 import { supabase } from "@/lib/supabase";
 import { calculateTokenCost } from "@/lib/tokenCosts";
+import VideoGenerator from "./VideoGenerator";
+import { toast } from "sonner";
 
 type MESSAGE = {
   role: string;
@@ -203,6 +205,12 @@ function ChatUi({ deletedConversationId }: ChatUiProps) {
   };
 
   const onSendMessage = async (inputSuggestion?: string) => {
+    // Check if user has enough credits
+    if (user?.credits <= 0) {
+      toast.error("Insufficient tokens! Please buy more tokens to continue.");
+      return;
+    }
+
     setLoading(true);
     let userInput = inputSuggestion ?? input;
 
@@ -430,10 +438,15 @@ function ChatUi({ deletedConversationId }: ChatUiProps) {
     // Use the sophisticated token costing system
     const tokenCount = calculateTokenCost(assistant?.name || "default", resp);
     const isImageGeneration = assistant?.name === "Image editor";
+    const isVideoGeneration = assistant?.name === "Video generator";
 
     console.log(
       `${
-        isImageGeneration ? "Image generation" : "Text response"
+        isImageGeneration
+          ? "Image generation"
+          : isVideoGeneration
+          ? "Video generation"
+          : "Text response"
       } - charging ${tokenCount} tokens`
     );
 
@@ -621,14 +634,11 @@ function ChatUi({ deletedConversationId }: ChatUiProps) {
               ref={inputRef}
               placeholder="Describe the image you want to generate or edit..."
               value={input}
-              disabled={loading || user?.credits <= 0}
+              disabled={loading}
               onChange={(event) => setInput(event.target.value)}
               onKeyPress={(e) => e.key == "Enter" && onSendMessage()}
             />
-            <Button
-              disabled={loading || user?.credits <= 0}
-              onClick={() => onSendMessage()}
-            >
+            <Button disabled={loading} onClick={() => onSendMessage()}>
               <Send />
             </Button>
           </div>
@@ -638,6 +648,15 @@ function ChatUi({ deletedConversationId }: ChatUiProps) {
               💡 Generate new images from text or upload an image to edit it
             </p>
           )}
+
+          {/* Token Cost Indicator for Image Editor */}
+          <div className="text-xs text-gray-600 text-center">
+            Cost: 1000 tokens per image generation
+          </div>
+        </div>
+      ) : assistant?.name === "Video generator" ? (
+        <div className="absolute top-5 bottom-5 w-[94%] overflow-y-auto">
+          <VideoGenerator />
         </div>
       ) : (
         <div
@@ -648,14 +667,11 @@ function ChatUi({ deletedConversationId }: ChatUiProps) {
             ref={inputRef}
             placeholder="Start Typing here..."
             value={input}
-            disabled={loading || user?.credits <= 0}
+            disabled={loading}
             onChange={(event) => setInput(event.target.value)}
             onKeyPress={(e) => e.key == "Enter" && onSendMessage()}
           />
-          <Button
-            disabled={loading || user?.credits <= 0}
-            onClick={() => onSendMessage()}
-          >
+          <Button disabled={loading} onClick={() => onSendMessage()}>
             <Send />
           </Button>
         </div>

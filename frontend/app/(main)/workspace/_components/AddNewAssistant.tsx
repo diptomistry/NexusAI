@@ -1,4 +1,4 @@
-import React, { useContext, useState } from "react";
+import React, { useContext, useState, useEffect, useRef } from "react";
 import {
   Dialog,
   DialogClose,
@@ -28,9 +28,10 @@ import { AuthContext } from "@/context/AuthContext";
 import { AssistantContext } from "@/context/AssistantContext";
 import { Loader2Icon } from "lucide-react";
 import { insertSelectedAssistants } from "@/services/database";
+import { useRouter } from "next/navigation";
 
 const DEFAULT_ASSISTANT = {
-  image: "/bug-fixer.avif",
+  image: "/bug-finder.png",
   name: "",
   title: "",
   instruction: "",
@@ -45,6 +46,57 @@ function AddNewAssistant({ children }: any) {
   const { user } = useContext(AuthContext);
   const [loading, setLoading] = useState(false);
   const { assistant, setAssistant } = useContext(AssistantContext);
+  const [open, setOpen] = useState(false);
+  const router = useRouter();
+  const hasProcessedPendingAssistant = useRef(false);
+
+  // Check for pending assistant data after sign-in
+  useEffect(() => {
+    if (user && !hasProcessedPendingAssistant.current) {
+      const pendingAssistant = localStorage.getItem("pendingAssistant");
+      if (pendingAssistant) {
+        hasProcessedPendingAssistant.current = true;
+        try {
+          const assistantData = JSON.parse(pendingAssistant);
+
+          // Create the assistant directly without opening modal
+          autoCreateAssistant(assistantData);
+        } catch (error) {
+          console.error("Error parsing pending assistant data:", error);
+          localStorage.removeItem("pendingAssistant");
+        }
+      }
+    }
+  }, [user]);
+
+  const autoCreateAssistant = async (assistantData: ASSISTANT) => {
+    if (
+      !assistantData?.name ||
+      !assistantData.title ||
+      (assistantData?.name !== "Image editor" && !assistantData.userInstruction)
+    ) {
+      toast(
+        "Incomplete assistant data. Please try creating the assistant again."
+      );
+      localStorage.removeItem("pendingAssistant");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const result = await insertSelectedAssistants([assistantData], user?.id);
+      toast(`Assistant "${assistantData.name}" created successfully!`);
+      if (setAssistant) {
+        setAssistant(null);
+      }
+      localStorage.removeItem("pendingAssistant");
+    } catch (error) {
+      console.error("Error adding assistant:", error);
+      toast("Error creating assistant. Please try again.");
+    }
+    setLoading(false);
+  };
+
   const onHandleInputChange = (field: string, value: string) => {
     setSelectedAssistant((prev: any) => {
       const updated = {
@@ -69,32 +121,25 @@ function AddNewAssistant({ children }: any) {
     });
   };
   const onSave = async () => {
-    if (
-      !selectedAssistant?.name ||
-      !selectedAssistant.title ||
-      (selectedAssistant?.name !== "Image editor" &&
-        !selectedAssistant.userInstruction)
-    ) {
-      toast("Please enter all details");
+    // Check if user is authenticated
+    if (!user) {
+      // Store the assistant data in localStorage before redirecting
+      localStorage.setItem(
+        "pendingAssistant",
+        JSON.stringify(selectedAssistant)
+      );
+      setOpen(false); // Close the modal first
+      toast("Please sign in to create an assistant");
+      router.push("/sign-in");
       return;
     }
-    setLoading(true);
-    try {
-      const result = await insertSelectedAssistants(
-        [selectedAssistant],
-        user?.id
-      );
-      toast("New Assistant Added!");
-      setAssistant(null);
-    } catch (error) {
-      console.error("Error adding assistant:", error);
-      toast("Error adding assistant");
-    }
-    setLoading(false);
+
+    // Use the same function for creating assistants
+    await autoCreateAssistant(selectedAssistant);
   };
 
   return (
-    <Dialog>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent>
         <DialogHeader>

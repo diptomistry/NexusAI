@@ -6,7 +6,7 @@ import React, { useContext } from "react";
 function Header() {
   const { user } = useContext(AuthContext);
   return (
-    <div className="pl-4 fixed shadow-sm w-full flex justify-between items-center px-14 bg-white/95 backdrop-blur-sm z-50">
+    <div className="p-2 fixed shadow-sm w-full flex justify-between items-center px-14 bg-white/95 backdrop-blur-sm z-50">
       <div className="flex items-center gap-3">
         <Image
           src={"/NesusAI.png"}

@@ -24,16 +24,21 @@ function Provider({
     const token = localStorage.getItem("user_token");
     //Get New Access Token
     const userData = token && (await GetAuthUserData(token));
-    if (!userData?.email) {
+
+    // Allow AI assistants page to be accessible without authentication
+    if (!userData?.email && pathname !== "/ai-assistants") {
       router.replace("/sign-in");
       return;
     }
+
     // Get User Info From Database
-    try {
-      const result = await getUser(userData.email);
-      setUser(result);
-    } catch (e) {
-      console.error("Error fetching user:", e);
+    if (userData?.email) {
+      try {
+        const result = await getUser(userData.email);
+        setUser(result);
+      } catch (e) {
+        console.error("Error fetching user:", e);
+      }
     }
   };
   return (

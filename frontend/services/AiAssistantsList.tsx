@@ -17,7 +17,7 @@ export default [
     id: 2,
     name: "Emma",
     title: "Grammar Fixer ✍️",
-    image: "/grammer-fixer.jpg",
+    image: "/grammer-fixer.png",
     instruction: `Fix grammar mistakes in provided text.`,
     userInstruction: `Check the grammar of the provided text and return the corrected version with a summary of changes.`,
     sampleQuestions: [
@@ -31,7 +31,7 @@ export default [
     id: 3,
     name: "Olivia",
     title: "Email Writer & Reply Assistant 📩",
-    image: "/email-writer.avif",
+    image: "/email-writer.png",
     instruction: `Assist in writing and replying to emails.`,
     userInstruction: `Generate well-structured emails based on user input, adjusting tone as needed.`,
     sampleQuestions: [
@@ -45,7 +45,7 @@ export default [
     id: 4,
     name: "Liam",
     title: "YouTube Script Writer 🎬",
-    image: "/youtube-script-writer.jpg",
+    image: "/youtube-script-writer.png",
     instruction: `Create engaging YouTube scripts.`,
     userInstruction: `Generate structured YouTube scripts based on the user’s topic and preferred style.`,
     sampleQuestions: [
@@ -59,7 +59,7 @@ export default [
     id: 5,
     name: "Harry",
     title: "Code Writer 💻",
-    image: "/code-writer.jpg",
+    image: "/code-writer.png",
     instruction: `Write and assist with coding tasks.`,
     userInstruction: `Generate code snippets, scripts, or provide programming guidance based on user requests.`,
     sampleQuestions: [
@@ -73,7 +73,7 @@ export default [
     id: 6,
     name: "James",
     title: "Bug Finder 🐛",
-    image: "/bug-fixer.avif",
+    image: "/bug-finder.png",
     instruction: `Identify and fix issues in code.`,
     userInstruction: `Analyze the provided code, find bugs, and suggest fixes.`,
     sampleQuestions: [
@@ -87,7 +87,7 @@ export default [
     id: 7,
     name: "William",
     title: "Finance Assistant 💰",
-    image: "/finanace.avif",
+    image: "/finance.png",
     instruction: `Provide financial advice and tips.`,
     userInstruction: `Offer financial advice, budgeting tips, and investment insights.`,
     sampleQuestions: [
@@ -101,7 +101,7 @@ export default [
     id: 8,
     name: "Ava",
     title: "Virtual Girlfriend 💖",
-    image: "/virtual-girl.jpg",
+    image: "/virtual-girl.png",
     instruction: `Engage in friendly and romantic chats.`,
     userInstruction: `Have friendly and romantic conversations while maintaining appropriate and respectful interactions.`,
     sampleQuestions: [
@@ -115,7 +115,7 @@ export default [
     id: 9,
     name: "Ethan",
     title: "Virtual Boyfriend 💙",
-    image: "/ethan.avif",
+    image: "/virtual-boy.png",
     instruction: `Engage in friendly and supportive chats.`,
     userInstruction: `Engage in friendly and supportive conversations while keeping interactions appropriate.`,
     sampleQuestions: [
@@ -129,7 +129,7 @@ export default [
     id: 10,
     name: "Mia",
     title: "Personal Tutor 📚",
-    image: "/personal-tutor.jpg",
+    image: "/personal-tutor.png",
     instruction: `Help users with study-related queries.`,
     userInstruction: `Explain educational concepts, answer questions, and provide learning resources.`,
     sampleQuestions: [
@@ -143,7 +143,7 @@ export default [
     id: 11,
     name: "Image editor",
     title: "Image Generation & Editing 🖼️",
-    image: "/image-generate.jpg",
+    image: "/image-gen.png",
     instruction: `You are an image generation and editing assistant. You can generate new images from text descriptions or edit existing images when URLs are provided. Return the generated image URLs.`,
     userInstruction: `You can either: 1) Generate new images from text descriptions, or 2) Edit existing images by providing image URLs and describing the desired changes. The assistant will return generated image links.`,
     sampleQuestions: [
@@ -160,7 +160,7 @@ export default [
     id: 12,
     name: "Video generator",
     title: "Video Generation 🎬",
-    image: "/video-generate.jpg",
+    image: "/video-gen.png",
     instruction: `You are a video generation assistant. You can create videos from text prompts or images using advanced AI models. You support both text-to-video and image-to-video generation with various durations, resolutions, and aspect ratios. Always provide high-quality, creative, and engaging video content.`,
     userInstruction: `You can either: 1) Generate videos from text descriptions, or 2) Create videos from images. Specify duration (3-12 seconds), resolution (720p, 1080p), and aspect ratio (16:9, 9:16, 1:1, etc.) as needed. The assistant will return generated video URLs.`,
     sampleQuestions: [],

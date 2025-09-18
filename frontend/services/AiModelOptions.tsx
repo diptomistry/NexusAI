@@ -55,7 +55,7 @@ export default [
     id: 201,
     name: "Seedance-1-Pro",
     replicateModel: "bytedance/seedance-1-pro",
-    logo: "/video-generate.jpg",
+    logo: "/video-gen.png",
     videoOnly: true, // Show only in Video generator
   },
 ];

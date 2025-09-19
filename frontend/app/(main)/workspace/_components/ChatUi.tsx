@@ -4,11 +4,16 @@ import EmptyChatState from "./EmptyChatState";
 import { AssistantContext } from "@/context/AssistantContext";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Loader2Icon, Send, Upload, Download } from "lucide-react";
+import { Loader2Icon, Send, Upload, Download, Copy, Check } from "lucide-react";
 import axios from "axios";
 import AiModelOptions from "@/services/AiModelOptions";
 import Image from "next/image";
 import Markdown from "react-markdown";
+import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
+import {
+  oneDark,
+  oneLight,
+} from "react-syntax-highlighter/dist/esm/styles/prism";
 import { AuthContext } from "@/context/AuthContext";
 import { ASSISTANT } from "../../ai-assistants/page";
 import { updateUserTokens } from "@/services/database";
@@ -43,12 +48,37 @@ function ChatUi({ deletedConversationId }: ChatUiProps) {
   const { uploadedUrl, setUploadedUrl, setLatestGeneratedImages } =
     useUploadedImages();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [copiedMessages, setCopiedMessages] = useState<Set<number | string>>(
+    new Set()
+  );
+  const [isDarkMode, setIsDarkMode] = useState(false);
 
   useEffect(() => {
     if (chatRef.current) {
       chatRef.current.scrollTop = chatRef.current.scrollHeight;
     }
   }, [messages]);
+
+  // Detect dark mode
+  useEffect(() => {
+    const checkDarkMode = () => {
+      const isDark =
+        document.documentElement.classList.contains("dark") ||
+        window.matchMedia("(prefers-color-scheme: dark)").matches;
+      setIsDarkMode(isDark);
+    };
+
+    checkDarkMode();
+
+    // Listen for theme changes
+    const observer = new MutationObserver(checkDarkMode);
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["class"],
+    });
+
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     setMessages([]);
@@ -440,6 +470,38 @@ function ChatUi({ deletedConversationId }: ChatUiProps) {
     }
   };
 
+  const copyToClipboard = async (
+    content: string,
+    messageIndex: number | string
+  ) => {
+    try {
+      // Filter out image URLs from the content for copying
+      const imageUrlRegex =
+        /https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|webp|bmp|tiff|svg)(\?[^\s]*)?/gi;
+      const cleanContent = content.replace(imageUrlRegex, "").trim();
+
+      await navigator.clipboard.writeText(cleanContent);
+
+      // Mark this message as copied
+      setCopiedMessages((prev) => new Set(prev).add(messageIndex));
+
+      // Show success toast
+      toast.success("Text copied to clipboard!");
+
+      // Reset the copied state after 2 seconds
+      setTimeout(() => {
+        setCopiedMessages((prev) => {
+          const newSet = new Set(prev);
+          newSet.delete(messageIndex);
+          return newSet;
+        });
+      }, 2000);
+    } catch (error) {
+      console.error("Failed to copy text:", error);
+      toast.error("Failed to copy text to clipboard");
+    }
+  };
+
   const updateUserToken = async (resp: string | undefined) => {
     // Handle undefined or null response
     if (!resp || typeof resp !== "string") {
@@ -496,7 +558,7 @@ function ChatUi({ deletedConversationId }: ChatUiProps) {
 
       <div
         ref={chatRef}
-        className={`overflow-scroll scrollbar-hide ${
+        className={`overflow-y-auto overflow-x-hidden scrollbar-hide ${
           assistant?.name === "Image editor" ? "h-[65vh]" : "h-[74vh]"
         }`}
       >
@@ -518,7 +580,7 @@ function ChatUi({ deletedConversationId }: ChatUiProps) {
                 />
               )}
               <div
-                className={`p-3 rounded-lg gap-2
+                className={`p-3 rounded-lg gap-2 relative group max-w-full overflow-hidden
                                 ${
                                   msg.role == "user"
                                     ? "user-message rounded-lg"
@@ -588,10 +650,166 @@ function ChatUi({ deletedConversationId }: ChatUiProps) {
 
                   // Only show content if there's something meaningful after removing URLs
                   if (cleanContent && cleanContent.length > 0) {
-                    return <Markdown>{cleanContent}</Markdown>;
+                    return (
+                      <Markdown
+                        components={{
+                          code({
+                            node,
+                            inline,
+                            className,
+                            children,
+                            ...props
+                          }: any) {
+                            const match = /language-(\w+)/.exec(
+                              className || ""
+                            );
+                            const language = match ? match[1] : "";
+
+                            if (!inline && language) {
+                              return (
+                                <div className="relative group w-full max-w-full overflow-hidden">
+                                  <SyntaxHighlighter
+                                    style={
+                                      isDarkMode ? oneDark : (oneLight as any)
+                                    }
+                                    language={language}
+                                    PreTag="div"
+                                    className="rounded-lg !mt-0 !mb-0 overflow-x-auto max-w-full"
+                                    customStyle={{
+                                      maxWidth: "100%",
+                                      overflowX: "auto",
+                                      whiteSpace: "pre-wrap",
+                                      wordBreak: "break-word",
+                                    }}
+                                    {...props}
+                                  >
+                                    {String(children).replace(/\n$/, "")}
+                                  </SyntaxHighlighter>
+                                  <button
+                                    onClick={() =>
+                                      copyToClipboard(
+                                        String(children),
+                                        `${index}-code-${language}`
+                                      )
+                                    }
+                                    className={`absolute top-2 right-2 p-1.5 rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-200 ${
+                                      isDarkMode
+                                        ? "bg-gray-800 hover:bg-gray-700"
+                                        : "bg-gray-200 hover:bg-gray-300"
+                                    }`}
+                                    title="Copy code"
+                                  >
+                                    {copiedMessages.has(
+                                      `${index}-code-${language}`
+                                    ) ? (
+                                      <Check
+                                        size={14}
+                                        className="text-green-500"
+                                      />
+                                    ) : (
+                                      <Copy
+                                        size={14}
+                                        className={
+                                          isDarkMode
+                                            ? "text-gray-300"
+                                            : "text-gray-600"
+                                        }
+                                      />
+                                    )}
+                                  </button>
+                                </div>
+                              );
+                            } else if (!inline) {
+                              return (
+                                <div className="relative group w-full max-w-full overflow-hidden">
+                                  <SyntaxHighlighter
+                                    style={
+                                      isDarkMode ? oneDark : (oneLight as any)
+                                    }
+                                    PreTag="div"
+                                    className="rounded-lg !mt-0 !mb-0 overflow-x-auto max-w-full"
+                                    customStyle={{
+                                      maxWidth: "100%",
+                                      overflowX: "auto",
+                                      whiteSpace: "pre-wrap",
+                                      wordBreak: "break-word",
+                                    }}
+                                    {...props}
+                                  >
+                                    {String(children).replace(/\n$/, "")}
+                                  </SyntaxHighlighter>
+                                  <button
+                                    onClick={() =>
+                                      copyToClipboard(
+                                        String(children),
+                                        `${index}-code-block`
+                                      )
+                                    }
+                                    className={`absolute top-2 right-2 p-1.5 rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-200 ${
+                                      isDarkMode
+                                        ? "bg-gray-800 hover:bg-gray-700"
+                                        : "bg-gray-200 hover:bg-gray-300"
+                                    }`}
+                                    title="Copy code"
+                                  >
+                                    {copiedMessages.has(
+                                      `${index}-code-block`
+                                    ) ? (
+                                      <Check
+                                        size={14}
+                                        className="text-green-500"
+                                      />
+                                    ) : (
+                                      <Copy
+                                        size={14}
+                                        className={
+                                          isDarkMode
+                                            ? "text-gray-300"
+                                            : "text-gray-600"
+                                        }
+                                      />
+                                    )}
+                                  </button>
+                                </div>
+                              );
+                            }
+                            return (
+                              <code
+                                className="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-sm"
+                                {...props}
+                              >
+                                {children}
+                              </code>
+                            );
+                          },
+                        }}
+                      >
+                        {cleanContent}
+                      </Markdown>
+                    );
                   }
                   return null;
                 })()}
+
+                {/* Copy button for assistant messages (only if no code blocks) */}
+                {msg.role === "assistant" &&
+                  msg.content &&
+                  !msg.content.includes("```") && (
+                    <button
+                      onClick={() => copyToClipboard(msg.content, index)}
+                      className="absolute top-2 right-2 p-1.5 rounded-md bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                      title="Copy text"
+                    >
+                      {copiedMessages.has(index) ? (
+                        <Check size={14} className="text-green-600" />
+                      ) : (
+                        <Copy
+                          size={14}
+                          className="text-gray-600 dark:text-gray-300"
+                        />
+                      )}
+                    </button>
+                  )}
               </div>
             </div>
           </div>

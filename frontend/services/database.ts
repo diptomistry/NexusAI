@@ -59,14 +59,25 @@ export const insertSelectedAssistants = async (
   assistants: any[],
   userId: string
 ): Promise<string[]> => {
-  // First, check for existing assistants to prevent duplicates
-  const existingAssistants = await getAllUserAssistants(userId);
-  const existingAssistantIds = existingAssistants.map(a => a.assistant_id);
+  // For custom assistants (id = 0), we don't check for duplicates as they are always new
+  // For predefined assistants, check for duplicates to prevent re-adding
+  const customAssistants = assistants.filter(assistant => assistant.id === 0);
+  const predefinedAssistants = assistants.filter(assistant => assistant.id !== 0);
   
-  // Filter out assistants that already exist
-  const newAssistants = assistants.filter(assistant => 
-    !existingAssistantIds.includes(assistant.id)
-  );
+  let newAssistants = [...customAssistants]; // Custom assistants are always new
+  
+  if (predefinedAssistants.length > 0) {
+    // Check for existing predefined assistants to prevent duplicates
+    const existingAssistants = await getAllUserAssistants(userId);
+    const existingAssistantIds = existingAssistants.map(a => a.assistant_id);
+    
+    // Filter out predefined assistants that already exist
+    const newPredefinedAssistants = predefinedAssistants.filter(assistant => 
+      !existingAssistantIds.includes(assistant.id)
+    );
+    
+    newAssistants = [...newAssistants, ...newPredefinedAssistants];
+  }
   
   if (newAssistants.length === 0) {
     console.log("All assistants already exist, skipping insertion");
@@ -93,7 +104,7 @@ export const insertSelectedAssistants = async (
       user_id: userId,
       ai_model_id: replicateModel
     };
-  })
+  });
 
   const { data, error } = await supabase
     .from('user_ai_assistants')

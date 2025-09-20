@@ -13,6 +13,7 @@ import AiAssistantsList from "@/services/AiAssistantsList";
 import Image from "next/image";
 import { Input } from "@/components/ui/input";
 import { ASSISTANT } from "../../ai-assistants/page";
+import { Star } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -180,7 +181,12 @@ function AddNewAssistant({ children }: any) {
                         alt={assistant.name}
                         className="w-[35px] h-[35px] object-cover rounded-lg"
                       />
-                      <h2 className="text-xs">{assistant.title}</h2>
+                      <h2 className="text-xs flex items-center gap-1">
+                        {assistant.title}
+                        {assistant.isPro && (
+                          <Star className="w-3 h-3 text-amber-500 fill-current" />
+                        )}
+                      </h2>
                     </div>
                   ))}
                 </div>

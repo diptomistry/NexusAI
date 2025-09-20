@@ -8,6 +8,7 @@ import AiAssistantsList from "@/services/AiAssistantsList";
 import Image from "next/image";
 import { AssistantContext } from "@/context/AssistantContext";
 import { BlurFade } from "@/components/magicui/blur-fade";
+import { Star } from "lucide-react";
 import AddNewAssistant from "./AddNewAssistant";
 import {
   DropdownMenu,
@@ -150,7 +151,12 @@ function AssistantList() {
                             object-cover"
               />
               <div>
-                <h2 className="font-bold">{assistant_.name}</h2>
+                <h2 className="font-bold flex items-center gap-1">
+                  {assistant_.name}
+                  {assistant_.isPro && (
+                    <Star className="w-3 h-3 text-amber-500 fill-current" />
+                  )}
+                </h2>
                 <h2 className="text-gray-600 text-sm dark:text-gray-300">
                   {assistant_.title}
                 </h2>

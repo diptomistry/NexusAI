@@ -7,15 +7,17 @@ import { useGoogleLogin } from "@react-oauth/google";
 import axios from "axios";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import React, { useContext } from "react";
-import { createUser } from "@/services/database";
+import React, { useContext, useState } from "react";
+import { createUser, getAllUserAssistants } from "@/services/database";
 import { supabase } from "@/lib/supabase";
 
 function SignIn() {
   const { user, setUser } = useContext(AuthContext);
   const router = useRouter();
+  const [isSigningIn, setIsSigningIn] = useState(false);
   const googleLogin = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
+      setIsSigningIn(true);
       if (typeof window !== undefined) {
         localStorage.setItem("user_token", tokenResponse.access_token);
       }
@@ -29,12 +31,38 @@ function SignIn() {
           picture: userData.picture,
         });
 
-        // Note: Supabase RLS policies will be updated to allow uploads based on path
-
         setUser(result);
-        router.replace("/ai-assistants");
+
+        // Check if user has pending assistants from pre-sign-in selection
+        const pendingAssistants = localStorage.getItem("pendingAssistants");
+        if (pendingAssistants) {
+          // User had pre-selected assistants, go back to assistant selection page
+          // The assistant selection page will handle auto-continuing
+          router.replace("/ai-assistants");
+        } else {
+          // Check if user has existing assistants
+          try {
+            const existingAssistants = await getAllUserAssistants(result.id);
+            if (existingAssistants.length > 0) {
+              // User has assistants, go directly to workspace
+              router.replace("/workspace");
+            } else {
+              // New user with no assistants, go to assistant selection
+              router.replace("/ai-assistants");
+            }
+          } catch (assistantError) {
+            console.error(
+              "Error checking existing assistants:",
+              assistantError
+            );
+            // If there's an error checking assistants, default to assistant selection
+            router.replace("/ai-assistants");
+          }
+        }
       } catch (error) {
         console.error("Error creating user:", error);
+      } finally {
+        setIsSigningIn(false);
       }
     },
     onError: (errorResponse: any) => console.log(errorResponse),
@@ -49,7 +77,9 @@ function SignIn() {
         <Image src={"/NesusAI.png"} alt="Nexus AI" width={50} height={50} />
         <h2 className="text-2xl">Sign In To AI Personal Assitant & Agent</h2>
 
-        <Button onClick={() => googleLogin()}>Sign in With Gmail</Button>
+        <Button onClick={() => googleLogin()} disabled={isSigningIn}>
+          {isSigningIn ? "Signing in..." : "Sign in With Gmail"}
+        </Button>
       </div>
     </div>
   );

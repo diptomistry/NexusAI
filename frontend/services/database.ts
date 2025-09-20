@@ -59,7 +59,23 @@ export const insertSelectedAssistants = async (
   assistants: any[],
   userId: string
 ): Promise<string[]> => {
-  const assistantsWithUserId = assistants.map(assistant => {
+  // First, check for existing assistants to prevent duplicates
+  const existingAssistants = await getAllUserAssistants(userId);
+  const existingAssistantIds = existingAssistants.map(a => a.assistant_id);
+  
+  // Filter out assistants that already exist
+  const newAssistants = assistants.filter(assistant => 
+    !existingAssistantIds.includes(assistant.id)
+  );
+  
+  if (newAssistants.length === 0) {
+    console.log("All assistants already exist, skipping insertion");
+    return [];
+  }
+  
+  console.log(`Inserting ${newAssistants.length} new assistants (${assistants.length - newAssistants.length} duplicates skipped)`);
+  
+  const assistantsWithUserId = newAssistants.map(assistant => {
     // Convert display name to replicate model for storage
     const modelOption = AiModelOptions.find(
       (model) => model.name === assistant.aiModelId

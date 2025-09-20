@@ -20,10 +20,10 @@ public class RetrievalAugmentedGenerationService {
 
     private static final Logger logger = LoggerFactory.getLogger(RetrievalAugmentedGenerationService.class);
 
-    // RAG configuration constants
-    private static final int DEFAULT_CONTEXT_LIMIT = 5;
-    private static final int MAX_CONTEXT_LENGTH = 4000;
-    private static final double DEFAULT_SIMILARITY_THRESHOLD = 0.7;
+    // RAG configuration constants - Updated to support multiple documents
+    private static final int DEFAULT_CONTEXT_LIMIT = 20; // Increased from 5 to support multiple documents
+    private static final int MAX_CONTEXT_LENGTH = 15000; // Increased from 4000 to accommodate more content
+    private static final double DEFAULT_SIMILARITY_THRESHOLD = 0.5; // Lowered from 0.7 to include more chunks
     private static final double HIGH_SIMILARITY_THRESHOLD = 0.85;
 
     @Autowired
@@ -157,32 +157,74 @@ public class RetrievalAugmentedGenerationService {
     private List<DocumentChunkSimilarityResult> applyAdvancedFiltering(
             List<DocumentChunkSimilarityResult> chunks, String query, RAGConfig config) {
 
-        return chunks.stream()
-                // Filter by similarity threshold
+        // First pass: filter by similarity threshold and remove duplicates
+        List<DocumentChunkSimilarityResult> filteredChunks = chunks.stream()
                 .filter(chunk -> chunk.getSimilarity() >= config.getSimilarityThreshold())
-
-                // Remove duplicates based on content similarity
                 .filter(this::isNotDuplicate)
+                .collect(Collectors.toList());
 
-                // Apply diversity filtering
-                .collect(Collectors.toList())
-                .stream()
-
-                // Re-rank by relevance score
+        // Re-rank by relevance score
+        List<DocumentChunkSimilarityResult> rankedChunks = filteredChunks.stream()
                 .map(chunk -> {
                     double relevanceScore = calculateRelevanceScore(chunk, query, config);
                     chunk.setSimilarity(relevanceScore); // Store adjusted score
                     return chunk;
                 })
-
-                // Sort by adjusted relevance score
                 .sorted((a, b) -> Double.compare(b.getSimilarity(), a.getSimilarity()))
-
-                // Apply diversity selection
-                .collect(Collectors.toList())
-                .stream()
-                .limit(config.getMaxChunks())
                 .collect(Collectors.toList());
+
+        // Apply diversity filtering if enabled
+        if (config.isEnableDiversityFiltering()) {
+            return applyDiversitySelection(rankedChunks, config.getMaxChunks());
+        } else {
+            // Simple limit without diversity filtering
+            return rankedChunks.stream()
+                    .limit(config.getMaxChunks())
+                    .collect(Collectors.toList());
+        }
+    }
+
+    /**
+     * Apply diversity selection to ensure chunks from different documents are
+     * included
+     */
+    private List<DocumentChunkSimilarityResult> applyDiversitySelection(
+            List<DocumentChunkSimilarityResult> chunks, int maxChunks) {
+
+        Map<Long, List<DocumentChunkSimilarityResult>> chunksByDocument = chunks.stream()
+                .collect(Collectors.groupingBy(DocumentChunkSimilarityResult::getDocumentId));
+
+        List<DocumentChunkSimilarityResult> selectedChunks = new ArrayList<>();
+        List<Long> documentIds = new ArrayList<>(chunksByDocument.keySet());
+
+        // Round-robin selection to ensure diversity across documents
+        int maxPerDocument = Math.max(1, maxChunks / documentIds.size());
+        int remainingSlots = maxChunks;
+
+        // First pass: take top chunks from each document
+        for (Long documentId : documentIds) {
+            List<DocumentChunkSimilarityResult> documentChunks = chunksByDocument.get(documentId);
+            int chunksToTake = Math.min(maxPerDocument, Math.min(documentChunks.size(), remainingSlots));
+
+            for (int i = 0; i < chunksToTake && remainingSlots > 0; i++) {
+                selectedChunks.add(documentChunks.get(i));
+                remainingSlots--;
+            }
+        }
+
+        // Second pass: fill remaining slots with highest scoring chunks from any
+        // document
+        if (remainingSlots > 0) {
+            List<DocumentChunkSimilarityResult> remainingChunks = chunks.stream()
+                    .filter(chunk -> !selectedChunks.contains(chunk))
+                    .sorted((a, b) -> Double.compare(b.getSimilarity(), a.getSimilarity()))
+                    .limit(remainingSlots)
+                    .collect(Collectors.toList());
+
+            selectedChunks.addAll(remainingChunks);
+        }
+
+        return selectedChunks;
     }
 
     /**
@@ -247,6 +289,9 @@ public class RetrievalAugmentedGenerationService {
 
                 String chunkText = chunk.getChunkText();
                 if (chunkText != null && !chunkText.trim().isEmpty()) {
+                    // Clean the chunk text before adding to context
+                    chunkText = cleanChunkText(chunkText);
+
                     // Add section number if configured
                     if (config.isIncludeMetadata()) {
                         context.append(String.format("Section %d (similarity: %.2f):\n",
@@ -270,6 +315,172 @@ public class RetrievalAugmentedGenerationService {
         }
 
         return context.toString().trim();
+    }
+
+    /**
+     * Clean chunk text to fix formatting issues
+     */
+    private String cleanChunkText(String text) {
+        if (text == null || text.trim().isEmpty()) {
+            return text;
+        }
+
+        // Basic text cleaning
+        text = text.trim();
+
+        // Fix word splitting issues using a more direct approach
+        text = fixWordSplitting(text);
+
+        // Fix specific common OCR errors
+        text = text.replaceAll("\\bInvestig\\s+ates\\b", "Investigates");
+        text = text.replaceAll("\\bIntegr\\s+ates\\b", "Integrates");
+        text = text.replaceAll("\\btrans\\s+duction\\b", "transduction");
+        text = text.replaceAll("\\bcalibr\\s+ating\\b", "calibrating");
+        text = text.replaceAll("\\bExam\\s+ines\\b", "Examines");
+        text = text.replaceAll("\\bquant\\s+ifies\\b", "quantifies");
+        text = text.replaceAll("\\bs\\s+ensitivity\\b", "sensitivity");
+        text = text.replaceAll("\\brepeat\\s+ability\\b", "repeatability");
+        text = text.replaceAll("\\bhyster\\s+esis\\b", "hysteresis");
+        text = text.replaceAll("\\bfiref\\s+ighting\\b", "firefighting");
+        text = text.replaceAll("\\bEstablish\\s+es\\b", "Establishes");
+
+        // Fix more aggressive word splitting patterns
+        text = text.replaceAll("\\bvacuum\\s+se\\s+aler\\b", "vacuum sealer");
+        text = text.replaceAll("\\bvacuum\\s+sealing\\b", "vacuum sealing");
+        text = text.replaceAll("\\bbulky\\s+vacuum\\s+machines\\b", "bulky vacuum machines");
+        text = text.replaceAll("\\bglass\\s+jars\\b", "glass jars");
+        text = text.replaceAll("\\bRe\\s+usable\\b", "Reusable");
+        text = text.replaceAll("\\bmicro\\s+plast\\s+ics\\b", "microplastics");
+        text = text.replaceAll("\\bfres\\s+her\\b", "fresher");
+        text = text.replaceAll("\\bper\\s+ks\\b", "perks");
+        text = text.replaceAll("\\bfr\\s+uits\\b", "fruits");
+        text = text.replaceAll("\\bse\\s+aler\\b", "sealer");
+        text = text.replaceAll("\\bbag\\s+-\\s+based\\b", "bag-based");
+        text = text.replaceAll("\\bauto\\s+-\\s+stop\\b", "auto-stop");
+        text = text.replaceAll("\\bmicrowave\\s+-\\s+safe\\b", "microwave-safe");
+        text = text.replaceAll("\\bdishwasher\\s+-\\s+and\\b", "dishwasher- and");
+        text = text.replaceAll("\\bmoney\\s+-\\s+back\\b", "money-back");
+        text = text.replaceAll("\\bsell\\s+-\\s+outs\\b", "sell-outs");
+        text = text.replaceAll("\\bone\\s+-\\s+button\\b", "one-button");
+        text = text.replaceAll("\\blong\\s+-\\s+lasting\\b", "long-lasting");
+        text = text.replaceAll("\\b30\\s+-\\s+day\\b", "30-day");
+
+        // Fix common compound words that get split
+        text = text.replaceAll("\\bkitchen\\s+gadget\\b", "kitchen gadget");
+        text = text.replaceAll("\\bkitchen\\s+wonder\\b", "kitchen wonder");
+        text = text.replaceAll("\\bvacuum\\s+machines\\b", "vacuum machines");
+        text = text.replaceAll("\\bplastic\\s+bags\\b", "plastic bags");
+        text = text.replaceAll("\\bglass\\s+jars\\b", "glass jars");
+        text = text.replaceAll("\\bfood\\s+storage\\b", "food storage");
+        text = text.replaceAll("\\bfood\\s+preservation\\b", "food preservation");
+        text = text.replaceAll("\\bvacuum\\s+sealing\\b", "vacuum sealing");
+        text = text.replaceAll("\\bfresh\\s+food\\b", "fresh food");
+        text = text.replaceAll("\\bfood\\s+fresher\\b", "food fresher");
+        text = text.replaceAll("\\bkitchen\\s+counter\\b", "kitchen counter");
+        text = text.replaceAll("\\bcharging\\s+cable\\b", "charging cable");
+        text = text.replaceAll("\\blid\\s+opener\\b", "lid opener");
+        text = text.replaceAll("\\bfree\\s+shipping\\b", "free shipping");
+        text = text.replaceAll("\\bfree\\s+lids\\b", "free lids");
+        text = text.replaceAll("\\bmoney\\s+back\\b", "money back");
+        text = text.replaceAll("\\bguarantee\\s+period\\b", "guarantee period");
+        text = text.replaceAll("\\bpromotional\\s+offers\\b", "promotional offers");
+        text = text.replaceAll("\\badvertising\\s+hooks\\b", "advertising hooks");
+        text = text.replaceAll("\\bexample\\s+ads\\b", "example ads");
+
+        // Normalize whitespace
+        text = text.replaceAll("\\s+", " ");
+
+        return text;
+    }
+
+    /**
+     * Fix word splitting issues from PDF extraction
+     */
+    private String fixWordSplitting(String text) {
+        // More aggressive pattern to catch various word splitting scenarios
+        java.util.regex.Pattern pattern = java.util.regex.Pattern.compile("\\b([a-zA-Z]{1,})\\s+([a-zA-Z]{1,})\\b");
+        java.util.regex.Matcher matcher = pattern.matcher(text);
+        StringBuffer result = new StringBuffer();
+
+        while (matcher.find()) {
+            String firstWord = matcher.group(1);
+            String secondWord = matcher.group(2);
+            String combined = firstWord + secondWord;
+
+            // More lenient word detection
+            if (isLikelyWord(combined) || isCommonWord(combined) || isTechnicalTerm(combined)) {
+                matcher.appendReplacement(result, combined);
+            } else {
+                matcher.appendReplacement(result, matcher.group(0));
+            }
+        }
+        matcher.appendTail(result);
+
+        return result.toString();
+    }
+
+    /**
+     * Check if a word is a common English word
+     */
+    private boolean isCommonWord(String word) {
+        if (word.length() < 2)
+            return false;
+
+        // Common English words that often get split
+        String[] commonWords = {
+                "the", "and", "for", "are", "but", "not", "you", "all", "can", "had", "her", "was", "one", "our", "out",
+                "day", "get", "has", "him", "his", "how", "its", "may", "new", "now", "old", "see", "two", "way", "who",
+                "boy", "did", "man", "men", "put", "say", "she", "too", "use", "any", "ask", "big", "buy", "end", "far",
+                "few", "got", "hot", "let", "lot", "low", "off", "own", "run", "set", "sit", "sun", "ten", "try", "win",
+                "yes", "yet", "bad", "bag", "bed", "box", "car", "cat", "cup", "cut", "dog", "dry", "eat", "eye", "fat",
+                "fit", "fun", "gun", "hat", "hit", "job", "key", "leg", "lie", "map", "mix", "net", "oil", "pay", "pen",
+                "pet", "pie", "pig", "pot", "red", "run", "sad", "sea", "six", "sky", "son", "top", "toy", "war", "win",
+                "yes", "yet", "zip"
+        };
+
+        for (String common : commonWords) {
+            if (word.toLowerCase().equals(common)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Check if a word looks like a technical term
+     */
+    private boolean isTechnicalTerm(String word) {
+        if (word.length() < 3)
+            return false;
+
+        // Check for common technical suffixes
+        boolean hasTechnicalSuffix = word.matches(
+                ".*(tion|sion|ing|ment|ness|ity|ism|logy|graphy|metry|scopy|physis|genesis|analysis|synthesis|sealer|sealing|vacuum|kitchen|gadget|wonder|machine|storage|preservation|fresher|counter|cable|opener|shipping|guarantee|promotional|advertising).*");
+
+        // Check for common technical prefixes
+        boolean hasTechnicalPrefix = word.matches(
+                "(micro|macro|multi|inter|intra|trans|sub|super|hyper|ultra|pseudo|semi|auto|bio|geo|hydro|electro|thermo|photo|mechano|electro|vacuum|kitchen|food|glass|plastic|fresh|free|money|long|one|auto|microwave|dishwasher).*");
+
+        // Check for compound technical words
+        boolean isCompound = word.matches(
+                ".*(vacuum|sealer|sealing|kitchen|gadget|wonder|machine|storage|preservation|fresher|counter|cable|opener|shipping|guarantee|promotional|advertising|glass|jars|plastic|bags|food|fresh|free|money|long|lasting|button|stop|safe|back|outs|day|based|wonder|gadget).*");
+
+        return hasTechnicalSuffix || hasTechnicalPrefix || isCompound;
+    }
+
+    /**
+     * Check if a combined word looks like a real word
+     */
+    private boolean isLikelyWord(String word) {
+        if (word.length() < 3)
+            return false;
+
+        boolean hasVowel = word.matches(".*[aeiouAEIOU].*");
+        boolean hasConsonant = word.matches(".*[bcdfghjklmnpqrstvwxyzBCDFGHJKLMNPQRSTVWXYZ].*");
+        boolean hasCommonPattern = word.matches(".*(ing|ed|er|ly|tion|sion|ness|ment|able|ible).*");
+
+        return hasVowel && hasConsonant && (hasCommonPattern || word.length() > 4);
     }
 
     /**
@@ -395,9 +606,9 @@ public class RetrievalAugmentedGenerationService {
 
     // Configuration and result classes
     public static class RAGConfig {
-        private int maxChunks = DEFAULT_CONTEXT_LIMIT;
-        private int maxContextLength = MAX_CONTEXT_LENGTH;
-        private double similarityThreshold = DEFAULT_SIMILARITY_THRESHOLD;
+        private int maxChunks = DEFAULT_CONTEXT_LIMIT; // Now 20 by default
+        private int maxContextLength = MAX_CONTEXT_LENGTH; // Now 15000 by default
+        private double similarityThreshold = DEFAULT_SIMILARITY_THRESHOLD; // Now 0.5 by default
         private boolean includeMetadata = true;
         private boolean applyRecencyBoost = false;
         private boolean enableDiversityFiltering = true;

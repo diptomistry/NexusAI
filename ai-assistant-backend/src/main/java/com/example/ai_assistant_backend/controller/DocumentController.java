@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/documents")
@@ -83,6 +84,16 @@ public class DocumentController {
         try {
             long count = documentService.getUserDocumentCount(userId);
             return ResponseEntity.ok(count);
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    @GetMapping("/debug/{documentId}")
+    public ResponseEntity<Map<String, Object>> getDocumentDebugInfo(@PathVariable Long documentId) {
+        try {
+            Map<String, Object> debugInfo = documentService.getDocumentDebugInfo(documentId);
+            return ResponseEntity.ok(debugInfo);
         } catch (Exception e) {
             return ResponseEntity.internalServerError().build();
         }

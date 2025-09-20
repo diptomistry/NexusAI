@@ -165,5 +165,6 @@ export default [
     userInstruction: `You can either: 1) Generate videos from text descriptions, or 2) Create videos from images. Specify duration (3-12 seconds), resolution (720p, 1080p), and aspect ratio (16:9, 9:16, 1:1, etc.) as needed. The assistant will return generated video URLs.`,
     sampleQuestions: [],
     aiModelId: "Seedance-1-Pro",
+    isPro: true,
   },
 ];

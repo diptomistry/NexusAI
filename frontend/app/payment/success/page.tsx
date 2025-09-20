@@ -116,7 +116,7 @@ export default function PaymentSuccess() {
               🎉 Congratulations! You now have access to:
             </p>
             <ul className="text-sm text-left space-y-1 text-gray-700">
-              <li>✅ 500,000 AI tokens</li>
+              <li>✅ 30,000 AI tokens</li>
               <li>✅ Priority support</li>
               <li>✅ Advanced AI models</li>
               <li>✅ Unlimited conversations</li>

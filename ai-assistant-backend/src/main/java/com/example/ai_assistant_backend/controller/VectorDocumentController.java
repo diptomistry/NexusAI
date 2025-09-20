@@ -3,7 +3,9 @@ package com.example.ai_assistant_backend.controller;
 import com.example.ai_assistant_backend.dto.DocumentChunkSimilarityResult;
 import com.example.ai_assistant_backend.dto.DocumentUploadResponse;
 import com.example.ai_assistant_backend.model.Document;
+import com.example.ai_assistant_backend.model.DocumentChunk;
 import com.example.ai_assistant_backend.repository.DocumentRepository;
+import com.example.ai_assistant_backend.repository.DocumentChunkRepository;
 import com.example.ai_assistant_backend.service.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -14,7 +16,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.util.List;
+import java.util.*;
 import java.util.UUID;
 
 /**
@@ -45,6 +47,9 @@ public class VectorDocumentController {
 
     @Autowired
     private DocumentRepository documentRepository;
+
+    @Autowired
+    private DocumentChunkRepository documentChunkRepository;
 
     /**
      * Upload document with advanced vector processing
@@ -252,6 +257,77 @@ public class VectorDocumentController {
 
         } catch (Exception e) {
             logger.error("Failed to get performance metrics: {}", e.getMessage(), e);
+            return ResponseEntity.badRequest().body(null);
+        }
+    }
+
+    /**
+     * Debug endpoint to get all chunks for a document in order
+     */
+    @GetMapping("/debug-chunks")
+    public ResponseEntity<List<Map<String, Object>>> getDebugChunks(
+            @RequestParam("documentId") Long documentId) {
+        try {
+            List<DocumentChunk> chunks = documentChunkRepository.findByDocumentIdOrderByChunkIndex(documentId);
+
+            List<Map<String, Object>> debugInfo = new ArrayList<>();
+            for (DocumentChunk chunk : chunks) {
+                Map<String, Object> chunkInfo = new HashMap<>();
+                chunkInfo.put("chunkIndex", chunk.getChunkIndex());
+                chunkInfo.put("textLength", chunk.getChunkText().length());
+                chunkInfo.put("textPreview",
+                        chunk.getChunkText().substring(0, Math.min(200, chunk.getChunkText().length())));
+                chunkInfo.put("hasEmbedding", chunk.hasValidEmbedding());
+                debugInfo.add(chunkInfo);
+            }
+
+            return ResponseEntity.ok(debugInfo);
+        } catch (Exception e) {
+            logger.error("Failed to get debug chunks: {}", e.getMessage(), e);
+            return ResponseEntity.badRequest().body(null);
+        }
+    }
+
+    /**
+     * Debug endpoint to get all documents and their chunk status for an assistant
+     */
+    @GetMapping("/debug-assistant-documents")
+    public ResponseEntity<Map<String, Object>> getDebugAssistantDocuments(
+            @RequestParam("userId") String userId,
+            @RequestParam("assistantId") String assistantId) {
+        try {
+            Map<String, Object> debugInfo = new HashMap<>();
+
+            // Get all documents for this assistant
+            List<Document> documents = documentRepository.findByUserIdAndAssistantIdOrderByCreatedAtDesc(userId,
+                    assistantId);
+            debugInfo.put("totalDocuments", documents.size());
+
+            List<Map<String, Object>> documentInfo = new ArrayList<>();
+            for (Document doc : documents) {
+                Map<String, Object> docInfo = new HashMap<>();
+                docInfo.put("id", doc.getId());
+                docInfo.put("fileName", doc.getOriginalFileName());
+                docInfo.put("fileSize", doc.getFileSize());
+                docInfo.put("createdAt", doc.getCreatedAt());
+
+                // Get chunk count for this document
+                List<DocumentChunk> chunks = documentChunkRepository.findByDocumentIdOrderByChunkIndex(doc.getId());
+                docInfo.put("chunkCount", chunks.size());
+
+                // Check how many chunks have embeddings
+                long chunksWithEmbeddings = chunks.stream()
+                        .mapToLong(chunk -> chunk.hasValidEmbedding() ? 1 : 0)
+                        .sum();
+                docInfo.put("chunksWithEmbeddings", chunksWithEmbeddings);
+
+                documentInfo.add(docInfo);
+            }
+
+            debugInfo.put("documents", documentInfo);
+            return ResponseEntity.ok(debugInfo);
+        } catch (Exception e) {
+            logger.error("Failed to get debug assistant documents: {}", e.getMessage(), e);
             return ResponseEntity.badRequest().body(null);
         }
     }

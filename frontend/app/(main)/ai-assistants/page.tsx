@@ -6,7 +6,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { AuthContext } from "@/context/AuthContext";
 import { AssistantContext } from "@/context/AssistantContext";
 import AiAssistantsList from "@/services/AiAssistantsList";
-import { Loader, Loader2Icon } from "lucide-react";
+import { Loader, Loader2Icon, Star } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import React, { useContext, useEffect, useState } from "react";
@@ -25,6 +25,7 @@ export type ASSISTANT = {
   userInstruction: string;
   sampleQuestions: string[];
   aiModelId?: string;
+  isPro?: boolean; // Pro feature indicator
   _id?: string; // Supabase UUID for unique identification
 };
 function AIAssistants() {
@@ -32,6 +33,7 @@ function AIAssistants() {
   const { user } = useContext(AuthContext);
   const { setAssistant } = useContext(AssistantContext);
   const [loading, setLoading] = useState(false);
+  const [hasAutoContinued, setHasAutoContinued] = useState(false);
   const router = useRouter();
   useEffect(() => {
     // Only check for existing assistants if user is logged in
@@ -44,18 +46,62 @@ function AIAssistants() {
         // If there's pending data, the AddNewAssistant component will handle it
         // We don't need to do anything here as the modal will open automatically
       }
+
+      // Check for pending selected assistants after sign-in
+      const pendingAssistants = localStorage.getItem("pendingAssistants");
+      if (pendingAssistants && !hasAutoContinued) {
+        try {
+          const parsedAssistants = JSON.parse(pendingAssistants);
+          setSelectedAssistant(parsedAssistants);
+          // Automatically store assistants and redirect to workspace
+          handleAutoContinue(parsedAssistants);
+        } catch (error) {
+          console.error("Error parsing pending assistants:", error);
+        }
+      }
     }
   }, [user]);
+
+  const handleAutoContinue = async (assistants: ASSISTANT[]) => {
+    if (!user || assistants.length === 0 || hasAutoContinued) return;
+
+    setHasAutoContinued(true);
+    setLoading(true);
+
+    try {
+      const result = await insertSelectedAssistants(assistants, user.id);
+      setLoading(false);
+      // Clear pending assistants from localStorage
+      localStorage.removeItem("pendingAssistants");
+      router.replace("/workspace");
+      console.log("Auto-continued with assistants:", result);
+    } catch (error) {
+      console.error("Error auto-continuing with assistants:", error);
+      setLoading(false);
+      setHasAutoContinued(false); // Reset flag on error
+    }
+  };
 
   const GetUserAssistants = async () => {
     try {
       const result = await getAllUserAssistants(user.id);
       console.log(result);
+
+      // Check if there are pending assistants first
+      const pendingAssistants = localStorage.getItem("pendingAssistants");
+      if (pendingAssistants) {
+        // If there are pending assistants, don't redirect to workspace yet
+        // Let the auto-continue logic handle it
+        return;
+      }
+
       if (result.length > 0) {
-        // Navigate to New Screen
+        // User already has assistants, go directly to workspace
         router.replace("/workspace");
         return;
       }
+      // If user has no assistants, they stay on this page to select assistants
+      // This is the intended flow for new users
     } catch (error) {
       console.error("Error fetching assistants:", error);
     }
@@ -84,6 +130,11 @@ function AIAssistants() {
   const OnClickContinue = async () => {
     // Check if user is authenticated
     if (!user) {
+      // Store selected assistants in localStorage before redirecting to sign-in
+      localStorage.setItem(
+        "pendingAssistants",
+        JSON.stringify(selectedAssistan)
+      );
       router.push("/sign-in");
       return;
     }
@@ -92,6 +143,8 @@ function AIAssistants() {
     try {
       const result = await insertSelectedAssistants(selectedAssistan, user.id);
       setLoading(false);
+      // Clear any pending assistants from localStorage
+      localStorage.removeItem("pendingAssistants");
       router.replace("/workspace");
       console.log(result);
     } catch (error) {
@@ -120,9 +173,9 @@ function AIAssistants() {
             </BlurFade>
             <BlurFade delay={0.25 * 2} inView>
               <p className="text-xl md:text-2xl text-slate-600 dark:text-slate-300 mb-8 max-w-3xl mx-auto leading-relaxed">
-                Select the AI assistants that will help you accomplish your
-                goals. Each one is specialized in different areas to make your
-                life easier.
+                {user
+                  ? "Welcome! Select your AI assistants and we'll automatically set them up for you. You can always add more later from your workspace."
+                  : "Select the AI assistants that will help you accomplish your goals. Each one is specialized in different areas to make your life easier."}
               </p>
             </BlurFade>
 
@@ -132,6 +185,11 @@ function AIAssistants() {
                 <div className="bg-white/80 backdrop-blur-sm rounded-full px-6 py-3 border border-blue-200/50 shadow-lg">
                   <span className="text-lg font-semibold text-slate-700">
                     {selectedAssistan.length} selected
+                    {selectedAssistan.length > 0 && user && (
+                      <span className="text-sm text-green-600 ml-2">
+                        ✓ Ready to go!
+                      </span>
+                    )}
                   </span>
                 </div>
                 <AddNewAssistant>
@@ -155,14 +213,16 @@ function AIAssistants() {
                     Create Your Own AI Assistant
                   </Button>
                 </AddNewAssistant>
-                <RainbowButton
-                  disabled={selectedAssistan?.length == 0 || loading}
-                  onClick={OnClickContinue}
-                  className="px-8 py-4 text-lg font-semibold shadow-2xl hover:shadow-3xl transition-all duration-300 transform hover:scale-105"
-                >
-                  {loading && <Loader2Icon className="animate-spin mr-2" />}
-                  {user ? "Continue" : "Sign In to Continue"}
-                </RainbowButton>
+                {!user && (
+                  <RainbowButton
+                    disabled={selectedAssistan?.length == 0 || loading}
+                    onClick={OnClickContinue}
+                    className="px-8 py-4 text-lg font-semibold shadow-2xl hover:shadow-3xl transition-all duration-300 transform hover:scale-105"
+                  >
+                    {loading && <Loader2Icon className="animate-spin mr-2" />}
+                    Sign In to Continue
+                  </RainbowButton>
+                )}
               </div>
             </BlurFade>
           </div>
@@ -180,12 +240,24 @@ function AIAssistants() {
             >
               <div
                 className={`group relative bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm rounded-2xl p-6 border-2 transition-all duration-300 cursor-pointer hover:scale-105 hover:shadow-2xl ${
-                  IsAssistantSelected(assistant)
+                  assistant.isPro
+                    ? "border-amber-400 shadow-amber-200/50 shadow-xl bg-gradient-to-br from-amber-50/80 to-yellow-50/80 dark:from-amber-900/20 dark:to-yellow-900/20"
+                    : IsAssistantSelected(assistant)
                     ? "border-blue-500 shadow-blue-200/50 shadow-xl bg-blue-50/50 dark:bg-blue-900/20"
                     : "border-slate-200 dark:border-slate-700 hover:border-blue-300 dark:hover:border-blue-600"
                 }`}
                 onClick={() => onSelect(assistant)}
               >
+                {/* Pro Badge */}
+                {assistant.isPro && (
+                  <div className="absolute top-4 left-4 z-10">
+                    <div className="flex items-center gap-1 bg-gradient-to-r from-amber-500 to-yellow-500 text-white px-2 py-1 rounded-full text-xs font-semibold shadow-lg">
+                      <Star className="w-3 h-3 fill-current" />
+                      <span>PRO</span>
+                    </div>
+                  </div>
+                )}
+
                 {/* Selection Indicator */}
                 <div className="absolute top-4 right-4 z-10">
                   <div
@@ -227,8 +299,11 @@ function AIAssistants() {
 
                 {/* Assistant Info */}
                 <div className="text-center">
-                  <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                  <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors flex items-center justify-center gap-1">
                     {assistant.name}
+                    {assistant.isPro && (
+                      <Star className="w-4 h-4 text-amber-500 fill-current" />
+                    )}
                   </h3>
                   <p className="text-slate-600 dark:text-slate-300 text-sm font-medium mb-3">
                     {assistant.title}
@@ -250,23 +325,29 @@ function AIAssistants() {
           ))}
         </div>
 
-        {/* Bottom CTA */}
-        {selectedAssistan.length > 0 && (
+        {/* Auto-continue message for signed-in users with pending assistants */}
+        {user && selectedAssistan.length > 0 && (
           <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50">
-            <div className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm rounded-full px-8 py-4 shadow-2xl border border-blue-200/50">
+            <div className="bg-green-500/90 backdrop-blur-sm rounded-full px-8 py-4 shadow-2xl border border-green-200/50">
               <div className="flex items-center gap-4">
-                <span className="text-slate-700 dark:text-slate-300 font-medium">
-                  {selectedAssistan.length} assistant
-                  {selectedAssistan.length > 1 ? "s" : ""} selected
-                </span>
-                <RainbowButton
-                  disabled={loading}
-                  onClick={OnClickContinue}
-                  className="px-6 py-2 text-sm font-semibold"
-                >
-                  {loading && <Loader2Icon className="animate-spin mr-2" />}
-                  {user ? "Continue" : "Sign In to Continue"}
-                </RainbowButton>
+                {loading ? (
+                  <>
+                    <Loader2Icon className="animate-spin w-5 h-5 text-white" />
+                    <span className="text-white font-medium">
+                      Setting up your assistants...
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <span className="text-white font-medium">
+                      ✓ {selectedAssistan.length} assistant
+                      {selectedAssistan.length > 1 ? "s" : ""} selected
+                    </span>
+                    <span className="text-green-100 text-sm">
+                      Redirecting to workspace...
+                    </span>
+                  </>
+                )}
               </div>
             </div>
           </div>

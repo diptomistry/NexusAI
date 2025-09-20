@@ -16,6 +16,9 @@ import org.springframework.web.client.RestTemplate;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 public class AiChatService {
@@ -31,6 +34,9 @@ public class AiChatService {
 
     @Autowired
     private DocumentService documentService;
+
+    @Autowired
+    private RetrievalAugmentedGenerationService ragService;
 
     public AiChatService() {
         this.restTemplate = new RestTemplate();
@@ -49,11 +55,46 @@ public class AiChatService {
             System.out.println("User input: " + userInput);
             System.out.println("Assistant instruction: " + assistantInstruction);
 
-            // Get document context if user and assistant are provided
+            // Get document context using RAG if user and assistant are provided
             String documentContext = "";
             if (userId != null && assistantId != null) {
-                documentContext = documentService.getRelevantDocumentContext(userId, assistantId, userInput);
-                System.out.println("Document context retrieved: " + (documentContext.length() > 0 ? "Yes" : "No"));
+                try {
+                    // Use RAG service for intelligent document context retrieval
+                    RetrievalAugmentedGenerationService.RAGConfig config = new RetrievalAugmentedGenerationService.RAGConfig();
+
+                    // Special handling for "last part" queries - be more inclusive
+                    if (userInput.toLowerCase().contains("last part") || userInput.toLowerCase().contains("conclusion")
+                            || userInput.toLowerCase().contains("end")) {
+                        config.setMaxChunks(50); // Get even more chunks for "last part" queries (supports 3-4
+                                                 // documents)
+                        config.setSimilarityThreshold(0.2); // Very low threshold to include all chunks
+                        config.setMaxContextLength(25000); // More context for comprehensive responses
+                    } else {
+                        config.setMaxChunks(40); // Increased to support 3-4 documents (10-15 chunks each)
+                        config.setSimilarityThreshold(0.25); // Lowered to include more chunks from multiple documents
+                        config.setMaxContextLength(20000); // Increased to accommodate more documents
+                    }
+
+                    config.setIncludeMetadata(true); // Include metadata for better context
+                    config.setApplyRecencyBoost(true); // Boost recent documents
+                    config.setEnableDiversityFiltering(true); // Enable diversity filtering for better results
+
+                    RetrievalAugmentedGenerationService.RAGContext ragContext = ragService.generateContext(
+                            userInput,
+                            UUID.fromString(userId),
+                            assistantId,
+                            config);
+
+                    documentContext = ragContext.getContextText();
+
+                } catch (Exception e) {
+                    System.err
+                            .println("RAG context retrieval failed, falling back to simple context: " + e.getMessage());
+                    // Fallback to simple document context if RAG fails
+                    documentContext = documentService.getRelevantDocumentContext(userId, assistantId, userInput);
+                    System.out.println(
+                            "Fallback document context retrieved: " + (documentContext.length() > 0 ? "Yes" : "No"));
+                }
             }
 
             // Check if it's a Gemini model - only route to Gemini for the specific Gemini
@@ -82,6 +123,12 @@ public class AiChatService {
             fullInput.append(documentContext).append("\n\n");
         }
 
+        // Add formatting instructions to prevent word concatenation
+        fullInput.append("IMPORTANT: When responding, ensure proper spacing between words. " +
+                "Do not concatenate words together. Use proper punctuation and spacing. " +
+                "For example, write 'elastic modulus' not 'elasticmodulus', " +
+                "'maximum stress' not 'maximumstress', etc.\n\n");
+
         // Add user input
         fullInput.append(userInput);
 
@@ -106,6 +153,12 @@ public class AiChatService {
         if (assistantInstruction != null && !assistantInstruction.isEmpty()) {
             fullPrompt.append("Instructions: ").append(assistantInstruction).append("\n\n");
         }
+
+        // Add formatting instructions to prevent word concatenation
+        fullPrompt.append("IMPORTANT: When responding, ensure proper spacing between words. " +
+                "Do not concatenate words together. Use proper punctuation and spacing. " +
+                "For example, write 'elastic modulus' not 'elasticmodulus', " +
+                "'maximum stress' not 'maximumstress', etc.\n\n");
 
         // Add user input
         fullPrompt.append("User: ").append(input).append("\nAssistant:");
@@ -322,14 +375,26 @@ public class AiChatService {
                     System.out.println("Output received: " + output);
 
                     if (output != null && output.isArray() && output.size() > 0) {
-                        // If image outputs (URLs), return newline-separated list
+                        // Check if this is a text response (array of tokens) or image URLs
+                        boolean isTextResponse = true;
                         StringBuilder fullResponse = new StringBuilder();
+
                         for (JsonNode node : output) {
                             String val = node.asText();
-                            if (fullResponse.length() > 0)
-                                fullResponse.append("\n");
-                            fullResponse.append(val);
+
+                            // Check if this looks like an image URL
+                            if (val.startsWith("http") && (val.contains(".jpg") || val.contains(".png")
+                                    || val.contains(".gif") || val.contains(".webp"))) {
+                                isTextResponse = false;
+                                if (fullResponse.length() > 0)
+                                    fullResponse.append("\n");
+                                fullResponse.append(val);
+                            } else {
+                                // For text tokens, concatenate without newlines
+                                fullResponse.append(val);
+                            }
                         }
+
                         String generatedText = fullResponse.toString();
                         System.out.println("Generated output: " + generatedText);
                         return new AiChatResponse("assistant", generatedText);

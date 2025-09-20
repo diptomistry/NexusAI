@@ -61,6 +61,16 @@ const DocumentManager: React.FC = () => {
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
+      // Check document limit (maximum 2 documents per assistant)
+      if (documents.length >= 2) {
+        alert(
+          "Maximum 2 documents allowed per assistant. Please delete a document before uploading a new one."
+        );
+        // Reset file input
+        event.target.value = "";
+        return;
+      }
+
       // Check file size (10MB limit)
       if (file.size > 10 * 1024 * 1024) {
         alert("File size must be less than 10MB");
@@ -102,14 +112,13 @@ const DocumentManager: React.FC = () => {
       formData.append("assistantId", assistant.id.toString());
 
       const response = await axios.post<DocumentUploadResponse>(
-        "http://localhost:8080/api/vector-documents/upload",  // Changed this line
+        "http://localhost:8080/api/vector-documents/upload", // Changed this line
         formData,
         {
           headers: {
             "Content-Type": "multipart/form-data",
           },
         }
-      
       );
 
       if (response.data.success) {
@@ -178,15 +187,28 @@ const DocumentManager: React.FC = () => {
   return (
     <div className="p-6 bg-white rounded-lg shadow-sm border">
       <h3 className="text-lg font-semibold mb-4">Document Manager</h3>
-      <p className="text-sm text-gray-600 mb-4">
+      <p className="text-sm text-gray-600 mb-2">
         Upload documents to provide context to {assistant.name}. Supported
         formats: PDF, Word, Text, Markdown, RTF, HTML, Excel.
       </p>
+      <p className="text-xs text-gray-500 mb-4">
+        Documents: {documents.length}/2 (Maximum 2 documents per assistant)
+      </p>
 
       {/* Upload Section */}
-      <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 mb-6">
+      <div
+        className={`border-2 border-dashed rounded-lg p-6 mb-6 ${
+          documents.length >= 2
+            ? "border-gray-200 bg-gray-50"
+            : "border-gray-300"
+        }`}
+      >
         <div className="text-center">
-          <Upload className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+          <Upload
+            className={`mx-auto h-12 w-12 mb-4 ${
+              documents.length >= 2 ? "text-gray-300" : "text-gray-400"
+            }`}
+          />
           <div className="space-y-2">
             <Input
               id="fileInput"
@@ -194,13 +216,21 @@ const DocumentManager: React.FC = () => {
               onChange={handleFileSelect}
               accept=".pdf,.doc,.docx,.txt,.md,.rtf,.html,.xls,.xlsx"
               className="hidden"
+              disabled={documents.length >= 2}
             />
-            <label
-              htmlFor="fileInput"
-              className="cursor-pointer inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-            >
-              Choose File
-            </label>
+            {documents.length >= 2 ? (
+              <div className="text-sm text-gray-500">
+                <p className="font-medium">Document limit reached</p>
+                <p>Delete a document to upload a new one</p>
+              </div>
+            ) : (
+              <label
+                htmlFor="fileInput"
+                className="cursor-pointer inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+              >
+                Choose File
+              </label>
+            )}
             {selectedFile && (
               <div className="mt-2">
                 <p className="text-sm text-gray-600 break-words">
@@ -232,7 +262,9 @@ const DocumentManager: React.FC = () => {
               </div>
             )}
           </div>
-          <p className="text-xs text-gray-500 mt-2">Maximum file size: 10MB</p>
+          <p className="text-xs text-gray-500 mt-2">
+            Maximum file size: 10MB • Maximum documents: 2 per assistant
+          </p>
         </div>
       </div>
 

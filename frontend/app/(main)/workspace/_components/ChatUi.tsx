@@ -653,6 +653,74 @@ function ChatUi({ deletedConversationId }: ChatUiProps) {
                     return (
                       <Markdown
                         components={{
+                          // Bold text rendering
+                          strong: ({ children, ...props }: any) => (
+                            <strong
+                              className="font-bold text-gray-900 dark:text-gray-100"
+                              {...props}
+                            >
+                              {children}
+                            </strong>
+                          ),
+                          // Paragraph rendering
+                          p: ({ children, ...props }: any) => (
+                            <p
+                              className="mb-2 text-gray-800 dark:text-gray-200"
+                              {...props}
+                            >
+                              {children}
+                            </p>
+                          ),
+                          // List rendering
+                          ul: ({ children, ...props }: any) => (
+                            <ul
+                              className="list-disc list-inside mb-2 space-y-1"
+                              {...props}
+                            >
+                              {children}
+                            </ul>
+                          ),
+                          ol: ({ children, ...props }: any) => (
+                            <ol
+                              className="list-decimal list-inside mb-2 space-y-1"
+                              {...props}
+                            >
+                              {children}
+                            </ol>
+                          ),
+                          li: ({ children, ...props }: any) => (
+                            <li
+                              className="text-gray-800 dark:text-gray-200"
+                              {...props}
+                            >
+                              {children}
+                            </li>
+                          ),
+                          // Headings
+                          h1: ({ children, ...props }: any) => (
+                            <h1
+                              className="text-xl font-bold mb-2 text-gray-900 dark:text-gray-100"
+                              {...props}
+                            >
+                              {children}
+                            </h1>
+                          ),
+                          h2: ({ children, ...props }: any) => (
+                            <h2
+                              className="text-lg font-semibold mb-2 text-gray-900 dark:text-gray-100"
+                              {...props}
+                            >
+                              {children}
+                            </h2>
+                          ),
+                          h3: ({ children, ...props }: any) => (
+                            <h3
+                              className="text-base font-semibold mb-1 text-gray-900 dark:text-gray-100"
+                              {...props}
+                            >
+                              {children}
+                            </h3>
+                          ),
                           code({
                             node,
                             inline,

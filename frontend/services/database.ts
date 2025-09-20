@@ -93,8 +93,12 @@ export const insertSelectedAssistants = async (
     );
     const replicateModel = modelOption ? modelOption.replicateModel : 'google/gemini-2.0-flash';
     
+    // Generate unique ID for custom assistants (id = 0), keep original ID for predefined assistants
+    // Use a smaller range suitable for SMALLINT (0-32767)
+    const assistantId = assistant.id === 0 ? Math.floor(Math.random() * 30000) + 1000 : assistant.id;
+    
     return {
-      assistant_id: assistant.id,
+      assistant_id: assistantId,
       name: assistant.name,
       title: assistant.title,
       image: assistant.image,
